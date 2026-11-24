@@ -18,6 +18,9 @@
     "description" : "Who is signed in",
     "name" : "session"
   }, {
+    "description" : "Checkout and order history",
+    "name" : "orders"
+  }, {
     "description" : "Browse and search the catalog",
     "name" : "products"
   }, {
@@ -277,6 +280,84 @@
         "tags" : [ "cart" ]
       }
     },
+    "/api/v1/carts/me/checkout" : {
+      "post" : {
+        "operationId" : "checkout",
+        "parameters" : [ {
+          "description" : "Unique per checkout attempt; reuse it on retries",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Order"
+                }
+              }
+            },
+            "description" : "Same Idempotency-Key as a placed order: that order"
+          },
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Order"
+                }
+              }
+            },
+            "description" : "Order placed"
+          },
+          "402" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Payment declined; no order placed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CheckoutWarning"
+                }
+              }
+            },
+            "description" : "Allergen confirmation needed (CHECKOUT_ALLERGEN_WARNING), or PRODUCT_UNAVAILABLE"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Allergen check unavailable; nothing charged"
+          }
+        },
+        "summary" : "Re-check the cart, then charge and place the order",
+        "tags" : [ "orders" ]
+      }
+    },
     "/api/v1/carts/me/items" : {
       "post" : {
         "operationId" : "addCartItem",
@@ -426,6 +507,56 @@
         },
         "summary" : "Name and version of the running backend",
         "tags" : [ "meta" ]
+      }
+    },
+    "/api/v1/orders" : {
+      "get" : {
+        "operationId" : "listOrders",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Order"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "The signed-in parent's orders, newest first",
+        "tags" : [ "orders" ]
+      }
+    },
+    "/api/v1/orders/{id}" : {
+      "get" : {
+        "operationId" : "getOrder",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Order"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "One order, with any allergen warnings acknowledged for it",
+        "tags" : [ "orders" ]
       }
     },
     "/api/v1/products" : {
@@ -656,6 +787,34 @@
   },
   "components" : {
     "schemas" : {
+      "AcknowledgedWarning" : {
+        "type" : "object",
+        "description" : "The warning the parent acknowledged for an order line",
+        "properties" : {
+          "acknowledgedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "context" : {
+            "type" : "string",
+            "description" : "ADD_TO_CART or CHECKOUT"
+          },
+          "matches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SafetyMatch"
+            }
+          },
+          "shownAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "unverified" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "context", "matches", "shownAt", "unverified" ]
+      },
       "AddItemRequest" : {
         "type" : "object",
         "description" : "Add a product. Resend with ackToken after the parent confirms a 409 allergen warning.",
@@ -907,6 +1066,49 @@
         },
         "required" : [ "affectedProfiles", "available", "lineTotalCents", "matches", "product", "qty", "status", "unverified" ]
       },
+      "CheckoutRequest" : {
+        "type" : "object",
+        "description" : "Place the order. Send the same Idempotency-Key header on every retry of this checkout.",
+        "properties" : {
+          "ackToken" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "From the 409 CHECKOUT_ALLERGEN_WARNING response, after the parent confirmed"
+          },
+          "paymentToken" : {
+            "type" : "string",
+            "description" : "Payment token from the provider. Test provider: tok_test_approve or tok_test_decline",
+            "maxLength" : 200,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "paymentToken" ]
+      },
+      "CheckoutWarning" : {
+        "type" : "object",
+        "description" : "409 body from checkout: no order placed, nothing charged. Show every line's matches; if the parent confirms, resend checkout with ackToken and the same Idempotency-Key.",
+        "properties" : {
+          "ackExpiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ackToken" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "code" : {
+            "type" : "string",
+            "enum" : [ "CHECKOUT_ALLERGEN_WARNING" ]
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LineWarning"
+            }
+          }
+        },
+        "required" : [ "ackExpiresAt", "ackToken", "code", "lines" ]
+      },
       "CreateProductRequest" : {
         "type" : "object",
         "description" : "Create a product. Omit allergens if the label data is not yet known.",
@@ -945,6 +1147,39 @@
         },
         "required" : [ "name", "priceCents", "sku" ]
       },
+      "LineWarning" : {
+        "type" : "object",
+        "description" : "A cart line that needs the parent's confirmation before the order is placed",
+        "properties" : {
+          "affectedProfiles" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AffectedProfile"
+            }
+          },
+          "allergenVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "matches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SafetyMatch"
+            }
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "unverified" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "affectedProfiles", "matches", "productId", "productName", "unverified" ]
+      },
       "Me" : {
         "type" : "object",
         "description" : "The current browser session. Tokens are never exposed; only identity and roles.",
@@ -972,6 +1207,76 @@
           }
         },
         "required" : [ "authenticated", "loginUrl", "roles" ]
+      },
+      "Order" : {
+        "type" : "object",
+        "description" : "A placed order",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderLine"
+            }
+          },
+          "paymentReference" : {
+            "type" : "string"
+          },
+          "placedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PLACED" ]
+          },
+          "totalCents" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "currency", "id", "lines", "paymentReference", "placedAt", "status", "totalCents" ]
+      },
+      "OrderLine" : {
+        "type" : "object",
+        "description" : "One line of a placed order, as sold",
+        "properties" : {
+          "acknowledgedWarning" : {
+            "$ref" : "#/components/schemas/AcknowledgedWarning",
+            "description" : "Present when the parent confirmed an allergen warning for this line"
+          },
+          "allergenVersion" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Allergen version sold; absent if the product had no allergen data"
+          },
+          "lineTotalCents" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "qty" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "unitPriceCents" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "lineTotalCents", "productId", "productName", "qty", "unitPriceCents" ]
       },
       "ProblemDetail" : {
         "type" : "object",

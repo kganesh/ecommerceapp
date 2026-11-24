@@ -17,6 +17,7 @@ export function Layout() {
           </NavLink>
           {hasRole(me.data, 'SHOPPER') && <NavLink to="/profiles">My children</NavLink>}
           {hasRole(me.data, 'SHOPPER') && <NavLink to="/cart">Cart</NavLink>}
+          {hasRole(me.data, 'SHOPPER') && <NavLink to="/orders">Orders</NavLink>}
           {hasRole(me.data, 'CATALOG_ADMIN') && <NavLink to="/admin/products">Catalog admin</NavLink>}
         </nav>
         <AccountMenu />
