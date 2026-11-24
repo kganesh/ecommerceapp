@@ -81,7 +81,9 @@ public final class CatalogDtos {
             @Schema(requiredMode = REQUIRED) @PositiveOrZero long priceCents,
             @Schema(description = "ISO 4217 code; defaults to USD", example = "USD") @Pattern(regexp = "[A-Z]{3}") String currency,
             @Schema(description = "Allergens for version 1. Omit for 'no allergen data yet'; send [] for 'verified: none'.")
-            @Valid List<AllergenEntry> allergens) {
+            @Valid List<AllergenEntry> allergens,
+            @Schema(description = "The label extraction these allergens were reviewed from, if any (FR-19). Needs allergens.")
+            UUID labelExtractionId) {
     }
 
     @Schema(description = "Update product details. Allergens are changed separately and create a new version.")
@@ -95,7 +97,9 @@ public final class CatalogDtos {
     @Schema(description = "Replace a product's allergens. Always creates a new immutable allergen version.")
     public record SetAllergensRequest(
             @Schema(requiredMode = REQUIRED, description = "Complete allergen list; [] means verified to contain none")
-            @NotNull @Valid List<AllergenEntry> allergens) {
+            @NotNull @Valid List<AllergenEntry> allergens,
+            @Schema(description = "The label extraction these allergens were reviewed from, if any (FR-19)")
+            UUID labelExtractionId) {
     }
 
     public enum AuditAction { PRODUCT_CREATED, PRODUCT_UPDATED, ALLERGENS_CHANGED }
@@ -106,6 +110,8 @@ public final class CatalogDtos {
             @Schema(requiredMode = REQUIRED) String actor,
             Integer fromVersion,
             Integer toVersion,
+            @Schema(description = "Label extraction the allergen change was reviewed from, if any")
+            UUID labelExtractionId,
             @Schema(requiredMode = REQUIRED) Instant at) {
     }
 }

@@ -79,14 +79,18 @@ public class CatalogService {
         }
         if (request.allergens() != null) {
             validate(request.allergens());
+        } else if (request.labelExtractionId() != null) {
+            throw new ApiExceptions.BadRequest("LABEL_EXTRACTION_WITHOUT_ALLERGENS",
+                    "labelExtractionId needs the allergens that were reviewed from it");
         }
+        requireExtraction(request.labelExtractionId());
         UUID id = UUID.randomUUID();
         String currency = request.currency() == null ? "USD" : request.currency();
         repository.insertProduct(id, request.sku(), request.name(), request.description(), request.priceCents(), currency);
-        repository.audit(actor, id, AuditAction.PRODUCT_CREATED, null, null);
+        repository.audit(actor, id, AuditAction.PRODUCT_CREATED, null, null, null);
         if (request.allergens() != null) {
             int version = repository.insertAllergenVersion(id, request.allergens(), actor);
-            repository.audit(actor, id, AuditAction.ALLERGENS_CHANGED, null, version);
+            repository.audit(actor, id, AuditAction.ALLERGENS_CHANGED, null, version, request.labelExtractionId());
         }
         return get(id, false);
     }
@@ -96,18 +100,24 @@ public class CatalogService {
         repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ApiExceptions.NotFound("Product " + id + " not found"));
         repository.updateProduct(id, request.name(), request.description(), request.priceCents(), request.active());
-        repository.audit(actor, id, AuditAction.PRODUCT_UPDATED, null, null);
+        repository.audit(actor, id, AuditAction.PRODUCT_UPDATED, null, null, null);
         return get(id, false);
     }
 
-    /** Creates a new immutable allergen version (FR-14). Earlier versions stay untouched. */
+    /**
+     * Creates a new immutable allergen version (FR-14). Earlier versions stay untouched.
+     *
+     * @param labelExtractionId the AI label reading the admin reviewed, recorded in the audit (FR-19)
+     */
     @Transactional
-    public Product setAllergens(UUID id, List<AllergenEntry> allergens, String actor) {
+    public Product setAllergens(UUID id, List<AllergenEntry> allergens, UUID labelExtractionId, String actor) {
         ProductRow product = repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ApiExceptions.NotFound("Product " + id + " not found"));
         validate(allergens);
+        requireExtraction(labelExtractionId);
         int version = repository.insertAllergenVersion(id, allergens, actor);
-        repository.audit(actor, id, AuditAction.ALLERGENS_CHANGED, product.currentAllergenVersion(), version);
+        repository.audit(actor, id, AuditAction.ALLERGENS_CHANGED, product.currentAllergenVersion(), version,
+                labelExtractionId);
         return get(id, false);
     }
 
@@ -115,6 +125,13 @@ public class CatalogService {
     public List<AuditEntry> auditTrail(UUID id) {
         repository.findById(id).orElseThrow(() -> new ApiExceptions.NotFound("Product " + id + " not found"));
         return repository.auditTrail(id);
+    }
+
+    private void requireExtraction(UUID labelExtractionId) {
+        if (labelExtractionId != null && !repository.labelExtractionExists(labelExtractionId)) {
+            throw new ApiExceptions.BadRequest("UNKNOWN_LABEL_EXTRACTION",
+                    "Label extraction " + labelExtractionId + " not found");
+        }
     }
 
     private void validate(List<AllergenEntry> allergens) {
