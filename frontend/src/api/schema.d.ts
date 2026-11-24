@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/admin/label-extractions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read a label photo and suggest allergens. Saves nothing to the catalog. */
+        post: operations["adminExtractLabel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/label-extractions/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether label reading is turned on, and which model */
+        get: operations["adminLabelReadingStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/products": {
         parameters: {
             query?: never;
@@ -412,6 +446,11 @@ export interface components {
             at: string;
             /** Format: int32 */
             fromVersion?: number;
+            /**
+             * Format: uuid
+             * @description Label extraction the allergen change was reviewed from, if any
+             */
+            labelExtractionId?: string;
             /** Format: int32 */
             toVersion?: number;
         };
@@ -481,10 +520,40 @@ export interface components {
              */
             currency?: string;
             description?: string;
+            /**
+             * Format: uuid
+             * @description The label extraction these allergens were reviewed from, if any (FR-19). Needs allergens.
+             */
+            labelExtractionId?: string;
             name: string;
             /** Format: int64 */
             priceCents: number;
             sku: string;
+        };
+        /** @description What was read from one label photo, for the admin to check against the label */
+        LabelExtraction: {
+            allergens: components["schemas"]["SuggestedAllergen"][];
+            containsStatement?: string;
+            /**
+             * Format: uuid
+             * @description Pass as labelExtractionId when saving allergens
+             */
+            extractionId: string;
+            ingredientsText?: string;
+            mayContainStatement?: string;
+            /** @example us.anthropic.claude-sonnet-5-5 */
+            model: string;
+            notes?: string;
+            /** @description False when the photo could not be read reliably */
+            readable: boolean;
+            /** @description Allergen-like words that match no taxonomy entry */
+            unmatchedTerms: string[];
+        };
+        /** @description Whether label reading is turned on */
+        LabelReadingStatus: {
+            enabled: boolean;
+            /** @example us.anthropic.claude-sonnet-5-5 */
+            model: string;
         };
         /** @description A cart line that needs the parent's confirmation before the order is placed */
         LineWarning: {
@@ -645,6 +714,27 @@ export interface components {
         SetAllergensRequest: {
             /** @description Complete allergen list; [] means verified to contain none */
             allergens: components["schemas"]["AllergenEntry"][];
+            /**
+             * Format: uuid
+             * @description The label extraction these allergens were reviewed from, if any (FR-19)
+             */
+            labelExtractionId?: string;
+        };
+        /** @description An allergen suggested from a label photo. A suggestion only; nothing is saved until an admin saves. */
+        SuggestedAllergen: {
+            /** @example TREE_NUT.CASHEW */
+            allergenId: string;
+            /** @example Cashew */
+            displayName: string;
+            /**
+             * @description Printed words the suggestion is based on
+             * @example cashews
+             */
+            evidence?: string;
+            /** @enum {string} */
+            matchType: "CONTAINS" | "MAY_CONTAIN";
+            /** @enum {string} */
+            source: "MODEL" | "KEYWORD_SCAN" | "MODEL_AND_KEYWORD_SCAN";
         };
         /** @description Update product details. Allergens are changed separately and create a new version. */
         UpdateProductRequest: {
@@ -668,6 +758,53 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    adminExtractLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelExtraction"];
+                };
+            };
+        };
+    };
+    adminLabelReadingStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelReadingStatus"];
+                };
+            };
+        };
+    };
     adminSearchProducts: {
         parameters: {
             query?: {

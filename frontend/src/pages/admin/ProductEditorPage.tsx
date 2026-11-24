@@ -26,6 +26,7 @@ import {
 import type { Product } from '../../api/client'
 import { AllergenEditor } from '../../components/AllergenEditor'
 import { ErrorNotice } from '../../components/ErrorNotice'
+import { LabelPhotoReader } from '../../components/LabelPhotoReader'
 import { formatDateTime, toEntries, toSelection, type AllergenSelection } from '../../lib/format'
 
 const EMPTY: ProductDetailsInput = { sku: '', name: '', description: '', priceCents: 0, active: true }
@@ -85,11 +86,12 @@ function NewProductForm() {
   const [details, setDetails] = useState<ProductDetailsInput>(EMPTY)
   const [selection, setSelection] = useState<AllergenSelection>({})
   const [allergenDataKnown, setAllergenDataKnown] = useState(true)
+  const [labelExtractionId, setLabelExtractionId] = useState<string>()
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     create.mutate(
-      { details, allergens: allergenDataKnown ? toEntries(selection) : null },
+      { details, allergens: allergenDataKnown ? toEntries(selection) : null, labelExtractionId },
       { onSuccess: (created) => navigate(`/admin/products/${created.id}`) },
     )
   }
@@ -112,6 +114,14 @@ function NewProductForm() {
         />
         {!allergenDataKnown && (
           <Alert severity="warning">Shoppers will see “Unable to verify allergens” until allergens are entered.</Alert>
+        )}
+        {allergenDataKnown && (
+          <LabelPhotoReader
+            onApply={(next, extractionId) => {
+              setSelection(next)
+              setLabelExtractionId(extractionId)
+            }}
+          />
         )}
         {allergens.isSuccess && (
           <AllergenEditor allergens={allergens.data} value={selection} onChange={setSelection} disabled={!allergenDataKnown} />
@@ -141,6 +151,7 @@ function ExistingProductForms({ product }: { product: Product }) {
     active: product.active,
   })
   const [selection, setSelection] = useState<AllergenSelection>(() => toSelection(product.allergens))
+  const [labelExtractionId, setLabelExtractionId] = useState<string>()
 
   const submitDetails = (event: FormEvent) => {
     event.preventDefault()
@@ -149,7 +160,7 @@ function ExistingProductForms({ product }: { product: Product }) {
 
   const submitAllergens = (event: FormEvent) => {
     event.preventDefault()
-    setAllergens.mutate(toEntries(selection))
+    setAllergens.mutate({ allergens: toEntries(selection), labelExtractionId })
   }
 
   return (
@@ -177,6 +188,12 @@ function ExistingProductForms({ product }: { product: Product }) {
             ? `Current allergen version: ${product.allergenVersion}. Saving creates a new version; earlier versions are kept.`
             : 'No allergen data yet. Shoppers see “Unable to verify allergens”.'}
         </Typography>
+        <LabelPhotoReader
+          onApply={(next, extractionId) => {
+            setSelection(next)
+            setLabelExtractionId(extractionId)
+          }}
+        />
         {allergens.isSuccess && <AllergenEditor allergens={allergens.data} value={selection} onChange={setSelection} />}
         {setAllergens.isError && <ErrorNotice error={setAllergens.error} />}
         <Box>
@@ -206,7 +223,9 @@ function ExistingProductForms({ product }: { product: Product }) {
                   <TableCell>{entry.actor}</TableCell>
                   <TableCell>
                     {entry.action === 'ALLERGENS_CHANGED'
-                      ? `Allergens: version ${entry.fromVersion ?? '—'} → ${entry.toVersion}`
+                      ? `Allergens: version ${entry.fromVersion ?? '—'} → ${entry.toVersion}${
+                          entry.labelExtractionId ? ' (reviewed from a label photo)' : ''
+                        }`
                       : entry.action === 'PRODUCT_CREATED'
                         ? 'Created'
                         : 'Details updated'}
