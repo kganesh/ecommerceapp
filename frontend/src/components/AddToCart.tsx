@@ -1,5 +1,12 @@
+import AddShoppingCart from '@mui/icons-material/AddShoppingCart'
+import Alert from '@mui/material/Alert'
+import AlertTitle from '@mui/material/AlertTitle'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Link from '@mui/material/Link'
+import Typography from '@mui/material/Typography'
 import { useId, useState } from 'react'
-import { Link } from 'react-router'
+import { Link as RouterLink } from 'react-router'
 import { isCheckUnavailable, useAddToCart, type AllergenWarning } from '../api/cart'
 import { hasRole, signIn, useMe } from '../api/session'
 import { ErrorNotice } from './ErrorNotice'
@@ -20,38 +27,47 @@ export function WarningPanel({
   onCancel: () => void
 }) {
   const titleId = useId()
+  const contains = warning.matches.some((m) => m.matchType === 'CONTAINS')
   return (
-    <div className="warning-panel" role="alertdialog" aria-labelledby={titleId} aria-modal="false">
-      <h4 id={titleId}>
-        <span aria-hidden="true">⚠ </span>
+    <Alert
+      severity={contains ? 'error' : 'warning'}
+      role="alertdialog"
+      aria-labelledby={titleId}
+      aria-modal="false"
+      variant="outlined"
+      sx={{ bgcolor: 'background.paper', borderWidth: 2 }}
+    >
+      <AlertTitle id={titleId} sx={{ fontWeight: 700 }}>
         {warning.unverified ? 'Unable to verify allergens' : 'Allergen warning'}: {warning.productName}
-      </h4>
+      </AlertTitle>
       {changed && (
-        <p>
+        <Typography variant="body2" sx={{ mb: 1 }}>
           <strong>The details changed since you last looked.</strong> Please review them again.
-        </p>
+        </Typography>
       )}
       {warning.unverified ? (
-        <p>
+        <Typography variant="body2">
           This product has no allergen information yet, so we can't check it for{' '}
           {warning.affectedProfiles.map((p) => p.label).join(', ')}. Read the package label before serving.
-        </p>
+        </Typography>
       ) : (
         <>
-          <p>This product matches your children's avoid lists:</p>
+          <Typography variant="body2">This product matches your children's avoid lists:</Typography>
           <MatchList matches={warning.matches} />
         </>
       )}
-      <p>It has not been added to your cart.</p>
-      <div className="actions">
-        <button type="button" onClick={onCancel} autoFocus>
+      <Typography variant="body2" sx={{ mt: 1 }}>
+        It has not been added to your cart.
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+        <Button variant="contained" onClick={onCancel} autoFocus>
           Don't add
-        </button>
-        <button type="button" className="secondary" onClick={onConfirm} disabled={busy}>
+        </Button>
+        <Button variant="outlined" color="inherit" onClick={onConfirm} disabled={busy}>
           I understand, add anyway
-        </button>
-      </div>
-    </div>
+        </Button>
+      </Box>
+    </Alert>
   )
 }
 
@@ -65,9 +81,9 @@ export function AddToCart({ productId }: { productId: string }) {
 
   if (!me.data?.authenticated) {
     return (
-      <button type="button" onClick={() => signIn(me.data)}>
+      <Button variant="outlined" onClick={() => signIn(me.data)}>
         Sign in to add to cart
-      </button>
+      </Button>
     )
   }
   if (!hasRole(me.data, 'SHOPPER')) return null
@@ -92,11 +108,18 @@ export function AddToCart({ productId }: { productId: string }) {
   }
 
   return (
-    <div className="add-to-cart">
+    <Box sx={{ display: 'grid', gap: 1 }}>
       {!warning && (
-        <button type="button" onClick={() => submit()} disabled={add.isPending}>
-          Add to cart
-        </button>
+        <Box>
+          <Button
+            variant="contained"
+            startIcon={<AddShoppingCart />}
+            onClick={() => submit()}
+            disabled={add.isPending}
+          >
+            Add to cart
+          </Button>
+        </Box>
       )}
       {warning && (
         <WarningPanel
@@ -111,19 +134,21 @@ export function AddToCart({ productId }: { productId: string }) {
         />
       )}
       {added && (
-        <p role="status">
-          Added. <Link to="/cart">View cart</Link>
-        </p>
+        <Typography variant="body2" role="status">
+          Added.{' '}
+          <Link component={RouterLink} to="/cart">
+            View cart
+          </Link>
+        </Typography>
       )}
       {add.isError &&
         (isCheckUnavailable(add.error) ? (
-          <p className="problem" role="alert">
-            <span aria-hidden="true">⚠ </span>
+          <Alert severity="warning" role="alert">
             We couldn't check allergens right now, so nothing was added. Please try again.
-          </p>
+          </Alert>
         ) : (
           <ErrorNotice error={add.error} />
         ))}
-    </div>
+    </Box>
   )
 }

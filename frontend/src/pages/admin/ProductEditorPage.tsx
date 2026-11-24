@@ -1,5 +1,19 @@
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Paper from '@mui/material/Paper'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link as RouterLink, useNavigate, useParams } from 'react-router'
 import {
   useAdminProduct,
   useAllergens,
@@ -12,7 +26,7 @@ import {
 import type { Product } from '../../api/client'
 import { AllergenEditor } from '../../components/AllergenEditor'
 import { ErrorNotice } from '../../components/ErrorNotice'
-import { toEntries, toSelection, type AllergenSelection } from '../../lib/format'
+import { formatDateTime, toEntries, toSelection, type AllergenSelection } from '../../lib/format'
 
 const EMPTY: ProductDetailsInput = { sku: '', name: '', description: '', priceCents: 0, active: true }
 
@@ -26,38 +40,41 @@ function DetailsFields({
   isNew: boolean
 }) {
   return (
-    <>
-      <label htmlFor="sku">SKU</label>
-      <input id="sku" required disabled={!isNew} value={value.sku} onChange={(e) => onChange({ ...value, sku: e.target.value })} />
-      <label htmlFor="name">Name</label>
-      <input id="name" required value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} />
-      <label htmlFor="description">Description</label>
-      <textarea
-        id="description"
-        value={value.description}
-        onChange={(e) => onChange({ ...value, description: e.target.value })}
-      />
-      <label htmlFor="price">Price (USD)</label>
-      <input
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
+      <TextField id="sku" label="SKU" required disabled={!isNew} value={value.sku} onChange={(e) => onChange({ ...value, sku: e.target.value })} />
+      <TextField
         id="price"
+        label="Price (USD)"
         type="number"
-        min="0"
-        step="0.01"
         required
         defaultValue={(value.priceCents / 100).toFixed(2)}
         onChange={(e) => onChange({ ...value, priceCents: Math.round(Number(e.target.value) * 100) })}
+        slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+      />
+      <TextField
+        id="name"
+        label="Name"
+        required
+        value={value.name}
+        onChange={(e) => onChange({ ...value, name: e.target.value })}
+        sx={{ gridColumn: { sm: '1 / -1' } }}
+      />
+      <TextField
+        id="description"
+        label="Description"
+        multiline
+        minRows={2}
+        value={value.description}
+        onChange={(e) => onChange({ ...value, description: e.target.value })}
+        sx={{ gridColumn: { sm: '1 / -1' } }}
       />
       {!isNew && (
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={value.active}
-            onChange={(e) => onChange({ ...value, active: e.target.checked })}
-          />
-          Active (visible to shoppers)
-        </label>
+        <FormControlLabel
+          control={<Checkbox checked={value.active} onChange={(e) => onChange({ ...value, active: e.target.checked })} />}
+          label="Active (visible to shoppers)"
+        />
       )}
-    </>
+    </Box>
   )
 }
 
@@ -78,31 +95,35 @@ function NewProductForm() {
   }
 
   return (
-    <form onSubmit={submit} className="stacked">
-      <DetailsFields value={details} onChange={setDetails} isNew />
-      <fieldset>
-        <legend>Allergens (version 1)</legend>
-        <label className="checkbox">
-          <input type="checkbox" checked={allergenDataKnown} onChange={(e) => setAllergenDataKnown(e.target.checked)} />I
-          have the label and have entered its allergens
-        </label>
+    <Box component="form" onSubmit={submit} sx={{ display: 'grid', gap: 3 }}>
+      <Paper sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="h3" sx={{ mb: 2 }}>
+          Details
+        </Typography>
+        <DetailsFields value={details} onChange={setDetails} isNew />
+      </Paper>
+      <Paper component="fieldset" sx={{ p: { xs: 2, md: 3 }, m: 0, display: 'grid', gap: 1.5 }}>
+        <Typography component="legend" variant="h3" sx={{ float: 'left', mb: 1 }}>
+          Allergens (version 1)
+        </Typography>
+        <FormControlLabel
+          control={<Checkbox checked={allergenDataKnown} onChange={(e) => setAllergenDataKnown(e.target.checked)} />}
+          label="I have the label and have entered its allergens"
+        />
         {!allergenDataKnown && (
-          <p className="problem">Shoppers will see “Unable to verify allergens” until allergens are entered.</p>
+          <Alert severity="warning">Shoppers will see “Unable to verify allergens” until allergens are entered.</Alert>
         )}
         {allergens.isSuccess && (
-          <AllergenEditor
-            allergens={allergens.data}
-            value={selection}
-            onChange={setSelection}
-            disabled={!allergenDataKnown}
-          />
+          <AllergenEditor allergens={allergens.data} value={selection} onChange={setSelection} disabled={!allergenDataKnown} />
         )}
-      </fieldset>
+      </Paper>
       {create.isError && <ErrorNotice error={create.error} />}
-      <button type="submit" disabled={create.isPending}>
-        Create product
-      </button>
-    </form>
+      <Box>
+        <Button type="submit" variant="contained" size="large" disabled={create.isPending}>
+          Create product
+        </Button>
+      </Box>
+    </Box>
   )
 }
 
@@ -132,59 +153,71 @@ function ExistingProductForms({ product }: { product: Product }) {
   }
 
   return (
-    <>
-      <form onSubmit={submitDetails} className="stacked">
-        <h3>Details</h3>
+    <Box sx={{ display: 'grid', gap: 3 }}>
+      <Paper component="form" onSubmit={submitDetails} sx={{ p: { xs: 2, md: 3 }, display: 'grid', gap: 2 }}>
+        <Typography variant="h3">Details</Typography>
         <DetailsFields value={details} onChange={setDetails} isNew={false} />
         {update.isError && <ErrorNotice error={update.error} />}
-        {update.isSuccess && <p role="status">Details saved.</p>}
-        <button type="submit" disabled={update.isPending}>
-          Save details
-        </button>
-      </form>
+        {update.isSuccess && (
+          <Alert severity="success" role="status">
+            Details saved.
+          </Alert>
+        )}
+        <Box>
+          <Button type="submit" variant="contained" disabled={update.isPending}>
+            Save details
+          </Button>
+        </Box>
+      </Paper>
 
-      <form onSubmit={submitAllergens} className="stacked">
-        <h3>Allergens</h3>
-        <p>
+      <Paper component="form" onSubmit={submitAllergens} sx={{ p: { xs: 2, md: 3 }, display: 'grid', gap: 2 }}>
+        <Typography variant="h3">Allergens</Typography>
+        <Typography variant="body2" color="text.secondary">
           {product.allergenDataAvailable
             ? `Current allergen version: ${product.allergenVersion}. Saving creates a new version; earlier versions are kept.`
             : 'No allergen data yet. Shoppers see “Unable to verify allergens”.'}
-        </p>
+        </Typography>
         {allergens.isSuccess && <AllergenEditor allergens={allergens.data} value={selection} onChange={setSelection} />}
         {setAllergens.isError && <ErrorNotice error={setAllergens.error} />}
-        <button type="submit" disabled={setAllergens.isPending}>
-          Save allergens as new version
-        </button>
-      </form>
+        <Box>
+          <Button type="submit" variant="contained" disabled={setAllergens.isPending}>
+            Save allergens as new version
+          </Button>
+        </Box>
+      </Paper>
 
-      <h3>Edit history</h3>
-      {audit.isSuccess && (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">When</th>
-              <th scope="col">Who</th>
-              <th scope="col">What</th>
-            </tr>
-          </thead>
-          <tbody>
-            {audit.data.map((entry, i) => (
-              <tr key={i}>
-                <td>{new Date(entry.at).toLocaleString()}</td>
-                <td>{entry.actor}</td>
-                <td>
-                  {entry.action === 'ALLERGENS_CHANGED'
-                    ? `Allergens: version ${entry.fromVersion ?? '—'} → ${entry.toVersion}`
-                    : entry.action === 'PRODUCT_CREATED'
-                      ? 'Created'
-                      : 'Details updated'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </>
+      <Paper sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="h3" sx={{ mb: 1.5 }}>
+          Edit history
+        </Typography>
+        {audit.isSuccess && (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>When</TableCell>
+                <TableCell>Who</TableCell>
+                <TableCell>What</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {audit.data.map((entry, i) => (
+                <TableRow key={i}>
+                  <TableCell>{formatDateTime(entry.at)}</TableCell>
+                  <TableCell>{entry.actor}</TableCell>
+                  <TableCell>
+                    {entry.action === 'ALLERGENS_CHANGED'
+                      ? `Allergens: version ${entry.fromVersion ?? '—'} → ${entry.toVersion}`
+                      : entry.action === 'PRODUCT_CREATED'
+                        ? 'Created'
+                        : 'Details updated'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Paper>
+    </Box>
   )
 }
 
@@ -194,30 +227,31 @@ export function ProductEditorPage() {
   const product = useAdminProduct(id)
 
   return (
-    <section>
-      <p>
-        <Link to="/admin/products">← All products</Link>
-      </p>
+    <Box component="section" sx={{ maxWidth: 880 }}>
+      <Button component={RouterLink} to="/admin/products" startIcon={<ArrowBack />} color="inherit" sx={{ mb: 2 }}>
+        All products
+      </Button>
       {id === undefined && (
         <>
-          <h2>Add a product</h2>
+          <Typography variant="h2" sx={{ mb: 3 }}>
+            Add a product
+          </Typography>
           <NewProductForm />
         </>
       )}
-      {id !== undefined && product.isPending && <p>Loading…</p>}
+      {id !== undefined && product.isPending && <Typography>Loading…</Typography>}
       {id !== undefined && product.isError && <ErrorNotice error={product.error} />}
       {id !== undefined && product.isSuccess && (
         <>
-          <h2>{product.data.name}</h2>
+          <Typography variant="h2">{product.data.name}</Typography>
           {product.data.allergenVersion !== undefined && (
-            <p role="status">Allergen version {product.data.allergenVersion} is live.</p>
+            <Typography role="status" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
+              Allergen version {product.data.allergenVersion} is live.
+            </Typography>
           )}
-          <ExistingProductForms
-            key={`${product.data.id}:${product.data.allergenVersion ?? 'none'}`}
-            product={product.data}
-          />
+          <ExistingProductForms key={`${product.data.id}:${product.data.allergenVersion ?? 'none'}`} product={product.data} />
         </>
       )}
-    </section>
+    </Box>
   )
 }

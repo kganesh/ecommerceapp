@@ -1,29 +1,57 @@
-import { Link } from 'react-router'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
+import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import { Link as RouterLink } from 'react-router'
 import { isCheckUnavailable, useCart, useRemoveCartLine, useUpdateCartLine, type CartLine } from '../api/cart'
 import { hasRole, signIn, useMe } from '../api/session'
 import { ErrorNotice } from '../components/ErrorNotice'
-import { MatchList } from '../components/SafetyNotice'
+import { MatchList, Verdict } from '../components/SafetyNotice'
 import { formatPrice } from '../lib/format'
+import { tokens } from '../theme'
 
 function LineStatus({ line }: { line: CartLine }) {
   if (!line.available) {
-    return <p className="problem">No longer available. Remove it to check out.</p>
+    return (
+      <Alert severity="error" sx={{ py: 0 }}>
+        No longer available. Remove it to check out.
+      </Alert>
+    )
   }
-  if (line.status === 'CLEAR') return <p className="safety clear">No match with your children's avoid lists.</p>
+  if (line.status === 'CLEAR') {
+    return (
+      <Verdict tone="clear">
+        <Typography variant="body2">No match with your children's avoid lists.</Typography>
+      </Verdict>
+    )
+  }
   const heading = line.unverified ? 'Unable to verify allergens' : 'Allergen warning'
+  const contains = line.matches.some((m) => m.matchType === 'CONTAINS')
   return (
-    <div className="safety warning">
-      <p>
-        <span aria-hidden="true">⚠ </span>
-        <strong>{heading}</strong>
-        {line.status === 'ACKNOWLEDGED' ? ' — you confirmed this.' : ' — you will be asked to confirm at checkout.'}
-      </p>
+    <Verdict tone={contains ? 'contains' : 'caution'}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+        <Typography variant="body2" component="p">
+          <strong>{heading}</strong>
+          {line.status === 'ACKNOWLEDGED' ? ' — you confirmed this.' : ' — you will be asked to confirm at checkout.'}
+        </Typography>
+        {line.status === 'ACKNOWLEDGED' ? (
+          <Chip size="small" label="Confirmed" variant="outlined" sx={{ borderColor: tokens.sage, color: tokens.sage }} />
+        ) : (
+          <Chip size="small" label="Needs confirmation" sx={{ bgcolor: tokens.caution, color: '#fff', fontWeight: 700 }} />
+        )}
+      </Box>
       {line.unverified ? (
-        <p>No allergen information for {line.affectedProfiles.map((p) => p.label).join(', ')}.</p>
+        <Typography variant="body2">
+          No allergen information for {line.affectedProfiles.map((p) => p.label).join(', ')}.
+        </Typography>
       ) : (
         <MatchList matches={line.matches} />
       )}
-    </div>
+    </Verdict>
   )
 }
 
@@ -35,84 +63,108 @@ export function CartPage() {
   const update = useUpdateCartLine()
   const remove = useRemoveCartLine()
 
-  if (me.isPending) return <p>Loading…</p>
+  if (me.isPending) return <Typography>Loading…</Typography>
   if (!me.data?.authenticated) {
     return (
-      <section>
-        <h2>Cart</h2>
-        <button type="button" onClick={() => signIn(me.data)}>
+      <Paper sx={{ p: 3, maxWidth: 560 }}>
+        <Typography variant="h2">Cart</Typography>
+        <Button variant="contained" sx={{ mt: 2 }} onClick={() => signIn(me.data)}>
           Sign in to see your cart
-        </button>
-      </section>
+        </Button>
+      </Paper>
     )
   }
-  if (!isShopper) return <p className="problem">This account is not a shopper account.</p>
+  if (!isShopper) return <Alert severity="info">This account is not a shopper account.</Alert>
 
   return (
-    <section aria-labelledby="cart-heading">
-      <h2 id="cart-heading">Cart</h2>
-      {cart.isPending && <p>Loading…</p>}
+    <Box component="section" aria-labelledby="cart-heading">
+      <Typography variant="h2" id="cart-heading" sx={{ mb: 3 }}>
+        Cart
+      </Typography>
+      {cart.isPending && <Typography>Loading…</Typography>}
       {cart.isError &&
         (isCheckUnavailable(cart.error) ? (
-          <p className="problem" role="alert">
-            <span aria-hidden="true">⚠ </span>
+          <Alert severity="warning" role="alert">
             We couldn't check your cart for allergens right now. Please try again in a moment.
-          </p>
+          </Alert>
         ) : (
           <ErrorNotice error={cart.error} />
         ))}
       {cart.isSuccess && cart.data.lines.length === 0 && (
-        <p>
-          Your cart is empty. <Link to="/">Go shopping</Link>
-        </p>
+        <Paper sx={{ p: 3 }}>
+          <Typography>
+            Your cart is empty.{' '}
+            <Link component={RouterLink} to="/">
+              Go shopping
+            </Link>
+          </Typography>
+        </Paper>
       )}
       {cart.isSuccess && cart.data.lines.length > 0 && (
-        <>
-          {cart.data.needsAcknowledgment && (
-            <p className="problem" role="alert">
-              <span aria-hidden="true">⚠ </span>
-              Some items need your confirmation because their allergen details or your children's avoid lists
-              changed. You'll review them at checkout.
-            </p>
-          )}
-          <ul className="cart-lines">
-            {cart.data.lines.map((line) => (
-              <li key={line.product.id} className="cart-line">
-                <h3>
-                  <Link to={`/products/${line.product.id}`}>{line.product.name}</Link>
-                </h3>
-                <LineStatus line={line} />
-                <div className="inline">
-                  <label htmlFor={`qty-${line.product.id}`}>Quantity</label>
-                  <select
-                    id={`qty-${line.product.id}`}
-                    value={line.qty}
-                    onChange={(e) => update.mutate({ productId: line.product.id, qty: Number(e.target.value) })}
-                  >
-                    {Array.from({ length: Math.max(10, line.qty) }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                  <span>{formatPrice(line.lineTotalCents, line.product.currency)}</span>
-                  <button type="button" onClick={() => remove.mutate(line.product.id)}>
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <p className="total">
-            Total: <strong>{formatPrice(cart.data.totalCents, cart.data.currency)}</strong>
-          </p>
-          <p className="disclaimer">Always read the label on each package before serving.</p>
-          <Link className="button" to="/checkout" aria-disabled={cart.data.lines.length === 0}>
-            Go to checkout
-          </Link>
-        </>
+        <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 300px' }, alignItems: 'start' }}>
+          <Box>
+            {cart.data.needsAcknowledgment && (
+              <Alert severity="warning" role="alert" sx={{ mb: 2 }}>
+                Some items need your confirmation because their allergen details or your children's avoid lists
+                changed. You'll review them at checkout.
+              </Alert>
+            )}
+            <Box component="ul" className="cart-lines" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 2 }}>
+              {cart.data.lines.map((line) => (
+                <Paper component="li" key={line.product.id} className="cart-line" sx={{ p: 2, display: 'grid', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'baseline' }}>
+                    <Typography variant="h3">
+                      <Link component={RouterLink} to={`/products/${line.product.id}`} color="inherit" underline="hover">
+                        {line.product.name}
+                      </Link>
+                    </Typography>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      {formatPrice(line.lineTotalCents, line.product.currency)}
+                    </Typography>
+                  </Box>
+                  <LineStatus line={line} />
+                  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                    <TextField
+                      id={`qty-${line.product.id}`}
+                      select
+                      label="Quantity"
+                      size="small"
+                      value={line.qty}
+                      onChange={(e) => update.mutate({ productId: line.product.id, qty: Number(e.target.value) })}
+                      slotProps={{ select: { native: true } }}
+                      sx={{ width: 110 }}
+                    >
+                      {Array.from({ length: Math.max(10, line.qty) }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </TextField>
+                    <Button color="inherit" onClick={() => remove.mutate(line.product.id)}>
+                      Remove
+                    </Button>
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+
+          <Paper sx={{ p: 2.5, display: 'grid', gap: 1.5, position: { md: 'sticky' }, top: { md: 96 } }}>
+            <Typography variant="h3">Summary</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }} className="total">
+              <Typography>Total:</Typography>
+              <Typography sx={{ fontWeight: 700 }}>{formatPrice(cart.data.totalCents, cart.data.currency)}</Typography>
+            </Box>
+            <Button component={RouterLink} to="/checkout" variant="contained" size="large">
+              Go to checkout
+            </Button>
+            <Typography variant="body2" color="text.secondary">
+              Always read the label on each package before serving.
+            </Typography>
+          </Paper>
+        </Box>
       )}
       {(update.isError || remove.isError) && <ErrorNotice error={update.error ?? remove.error} />}
-    </section>
+    </Box>
   )
 }
