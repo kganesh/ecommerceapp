@@ -1,5 +1,9 @@
 import type { AllergenEntry, MatchType } from '../api/client'
 
+export function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+}
+
 export function formatPrice(priceCents: number, currency: string): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(priceCents / 100)
 }

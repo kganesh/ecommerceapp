@@ -1,3 +1,10 @@
+import Alert from '@mui/material/Alert'
+import Avatar from '@mui/material/Avatar'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Paper from '@mui/material/Paper'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { useAllergens } from '../api/catalog'
 import type { Allergen } from '../api/client'
@@ -12,6 +19,14 @@ import {
 import { hasRole, signIn, useMe } from '../api/session'
 import { AvoidListPicker } from '../components/AvoidListPicker'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { tokens } from '../theme'
+
+/** "Child 1" -> "C1", "Maya" -> "M": tells children apart at a glance. */
+function initials(label: string): string {
+  const trimmed = label.trim()
+  const digits = trimmed.match(/\d+$/)?.[0] ?? ''
+  return (trimmed.charAt(0).toUpperCase() + digits).slice(0, 3)
+}
 
 function summary(profile: Profile, allergens: Allergen[]): string {
   if (profile.avoidList.length === 0) return 'Avoiding nothing yet.'
@@ -28,8 +43,7 @@ function ProfileCard({ profile, allergens }: { profile: Profile; allergens: Alle
   const [selected, setSelected] = useState<Set<string>>(() => new Set(profile.avoidList))
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const dirty =
-    selected.size !== profile.avoidList.length || profile.avoidList.some((id) => !selected.has(id))
+  const dirty = selected.size !== profile.avoidList.length || profile.avoidList.some((id) => !selected.has(id))
 
   const submitAvoidList = (event: FormEvent) => {
     event.preventDefault()
@@ -42,61 +56,87 @@ function ProfileCard({ profile, allergens }: { profile: Profile; allergens: Alle
   }
 
   return (
-    <li className="profile-card">
-      <h3>{profile.label}</h3>
-      <p>{summary(profile, allergens)}</p>
+    <Paper component="li" className="profile-card" sx={{ p: { xs: 2, md: 3 }, display: 'grid', gap: 2 }}>
+      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+        <Avatar aria-hidden="true" sx={{ bgcolor: tokens.sageTint, color: tokens.sage, fontWeight: 700, fontSize: '0.9375rem' }}>
+          {initials(profile.label)}
+        </Avatar>
+        <Box>
+          <Typography variant="h3">{profile.label}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {summary(profile, allergens)}
+          </Typography>
+        </Box>
+      </Box>
 
-      <form onSubmit={submitAvoidList} aria-label={`Avoid list for ${profile.label}`}>
-        <fieldset>
-          <legend>Allergens to avoid for {profile.label}</legend>
-          <AvoidListPicker
-            idPrefix={profile.id}
-            allergens={allergens}
-            selected={selected}
-            onChange={setSelected}
-          />
-        </fieldset>
+      <Box component="form" onSubmit={submitAvoidList} aria-label={`Avoid list for ${profile.label}`}>
+        <Box component="fieldset" sx={{ border: 0, p: 0, m: 0 }}>
+          <Typography component="legend" variant="h4" sx={{ mb: 1 }}>
+            Allergens to avoid for {profile.label}
+          </Typography>
+          <AvoidListPicker idPrefix={profile.id} allergens={allergens} selected={selected} onChange={setSelected} />
+        </Box>
         {save.isError && <ErrorNotice error={save.error} />}
-        <button type="submit" disabled={!dirty || save.isPending}>
-          Save avoid list
-        </button>
-        {dirty && <span className="hint"> Unsaved changes</span>}
-      </form>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 2 }}>
+          <Button type="submit" variant="contained" disabled={!dirty || save.isPending}>
+            Save avoid list
+          </Button>
+          {dirty && (
+            <Typography variant="body2" color="text.secondary">
+              Unsaved changes
+            </Typography>
+          )}
+        </Box>
+      </Box>
 
-      <details>
-        <summary>Rename or delete</summary>
-        <form onSubmit={submitLabel} className="inline">
-          <label htmlFor={`label-${profile.id}`}>Label</label>
-          <input
+      <Box
+        component="details"
+        sx={{ borderTop: `1px solid ${tokens.line}`, pt: 1.5, '& summary': { cursor: 'pointer', color: tokens.muted } }}
+      >
+        <Typography component="summary" variant="body2">
+          Rename or delete
+        </Typography>
+        <Box component="form" onSubmit={submitLabel} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+          <TextField
             id={`label-${profile.id}`}
-            maxLength={40}
+            label="Label"
+            size="small"
             required
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            slotProps={{ htmlInput: { maxLength: 40 } }}
           />
-          <button type="submit" disabled={rename.isPending || label.trim() === profile.label}>
+          <Button type="submit" variant="outlined" disabled={rename.isPending || label.trim() === profile.label}>
             Rename
-          </button>
-        </form>
+          </Button>
+        </Box>
         {rename.isError && <ErrorNotice error={rename.error} />}
-        {!confirmDelete ? (
-          <button type="button" onClick={() => setConfirmDelete(true)}>
-            Delete {profile.label}
-          </button>
-        ) : (
-          <p>
-            Delete {profile.label} and their avoid list?{' '}
-            <button type="button" onClick={() => remove.mutate(profile.id)} disabled={remove.isPending}>
-              Yes, delete
-            </button>{' '}
-            <button type="button" onClick={() => setConfirmDelete(false)}>
-              Cancel
-            </button>
-          </p>
-        )}
+        <Box sx={{ mt: 1.5 }}>
+          {!confirmDelete ? (
+            <Button color="error" onClick={() => setConfirmDelete(true)}>
+              Delete {profile.label}
+            </Button>
+          ) : (
+            <Alert
+              severity="warning"
+              action={
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button color="error" variant="contained" size="small" onClick={() => remove.mutate(profile.id)} disabled={remove.isPending}>
+                    Yes, delete
+                  </Button>
+                  <Button size="small" color="inherit" onClick={() => setConfirmDelete(false)}>
+                    Cancel
+                  </Button>
+                </Box>
+              }
+            >
+              Delete {profile.label} and their avoid list?
+            </Alert>
+          )}
+        </Box>
         {remove.isError && <ErrorNotice error={remove.error} />}
-      </details>
-    </li>
+      </Box>
+    </Paper>
   )
 }
 
@@ -109,24 +149,26 @@ export function ProfilesPage() {
   const create = useCreateProfile()
   const [newLabel, setNewLabel] = useState('')
 
-  if (me.isPending) return <p>Loading…</p>
+  if (me.isPending) return <Typography>Loading…</Typography>
   if (!me.data?.authenticated) {
     return (
-      <section>
-        <h2>My children</h2>
-        <p>Sign in to set up each child's avoid list.</p>
-        <button type="button" onClick={() => signIn(me.data)}>
+      <Paper sx={{ p: 3, maxWidth: 560 }}>
+        <Typography variant="h2">My children</Typography>
+        <Typography sx={{ my: 1.5 }}>Sign in to set up each child's avoid list.</Typography>
+        <Button variant="contained" onClick={() => signIn(me.data)}>
           Sign in
-        </button>
-      </section>
+        </Button>
+      </Paper>
     )
   }
   if (!isShopper) {
     return (
-      <section>
-        <h2>My children</h2>
-        <p className="problem">This account is not a shopper account.</p>
-      </section>
+      <Box>
+        <Typography variant="h2">My children</Typography>
+        <Alert severity="info" sx={{ mt: 2 }}>
+          This account is not a shopper account.
+        </Alert>
+      </Box>
     )
   }
 
@@ -136,34 +178,40 @@ export function ProfilesPage() {
   }
 
   return (
-    <section aria-labelledby="profiles-heading">
-      <h2 id="profiles-heading">My children</h2>
-      <p>
-        Add a profile for each child and choose what they must avoid. Use a label like “Child 1”; we don't need
-        names or birthdays.
-      </p>
+    <Box component="section" aria-labelledby="profiles-heading" sx={{ maxWidth: 880 }}>
+      <Typography variant="h2" id="profiles-heading">
+        My children
+      </Typography>
+      <Typography color="text.secondary" sx={{ mt: 0.5, mb: 3, maxWidth: '62ch' }}>
+        Add a profile for each child and choose what they must avoid. A label like “Child 1” is enough; we don't
+        need names or birthdays.
+      </Typography>
 
-      <form onSubmit={submitNew} className="inline">
-        <label htmlFor="new-profile">New profile label</label>
-        <input
+      <Paper component="form" onSubmit={submitNew} sx={{ p: 2, display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+        <TextField
           id="new-profile"
-          maxLength={40}
-          required
+          label="New profile label"
           placeholder="Child 1"
+          size="small"
+          required
           value={newLabel}
           onChange={(e) => setNewLabel(e.target.value)}
+          slotProps={{ htmlInput: { maxLength: 40 } }}
+          sx={{ flex: '1 1 220px' }}
         />
-        <button type="submit" disabled={create.isPending}>
+        <Button type="submit" variant="contained" disabled={create.isPending}>
           Add profile
-        </button>
-      </form>
+        </Button>
+      </Paper>
       {create.isError && <ErrorNotice error={create.error} />}
 
-      {(profiles.isPending || allergens.isPending) && <p>Loading…</p>}
+      {(profiles.isPending || allergens.isPending) && <Typography>Loading…</Typography>}
       {profiles.isError && <ErrorNotice error={profiles.error} />}
-      {profiles.isSuccess && allergens.isSuccess && profiles.data.length === 0 && <p>No profiles yet.</p>}
+      {profiles.isSuccess && allergens.isSuccess && profiles.data.length === 0 && (
+        <Typography color="text.secondary">No profiles yet. Add one above to start checking products.</Typography>
+      )}
       {profiles.isSuccess && allergens.isSuccess && (
-        <ul className="profile-list">
+        <Box component="ul" className="profile-list" sx={{ m: 0, p: 0, listStyle: 'none', display: 'grid', gap: 2 }}>
           {profiles.data.map((profile) => (
             <ProfileCard
               key={`${profile.id}:${profile.avoidListVersion}:${profile.label}`}
@@ -171,8 +219,8 @@ export function ProfilesPage() {
               allergens={allergens.data}
             />
           ))}
-        </ul>
+        </Box>
       )}
-    </section>
+    </Box>
   )
 }

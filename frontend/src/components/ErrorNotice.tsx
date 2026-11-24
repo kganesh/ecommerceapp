@@ -1,6 +1,7 @@
+import Alert from '@mui/material/Alert'
 import { ApiError } from '../api/client'
 
-/** Readable error text for failed API calls. */
+/** Readable error text for failed API calls: what happened and what to do. */
 export function ErrorNotice({ error }: { error: unknown }) {
   let message = 'Something went wrong. Please try again.'
   if (error instanceof ApiError) {
@@ -10,9 +11,8 @@ export function ErrorNotice({ error }: { error: unknown }) {
     else message = error.message
   }
   return (
-    <p className="problem" role="alert">
-      <span aria-hidden="true">⚠ </span>
+    <Alert severity="error" role="alert" sx={{ my: 1 }}>
       {message}
-    </p>
+    </Alert>
   )
 }

@@ -1,3 +1,6 @@
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
 import { signIn, useMe, useSignOut } from '../api/session'
 
 export function AccountMenu() {
@@ -7,17 +10,19 @@ export function AccountMenu() {
   if (me.isPending) return null
   if (!me.data?.authenticated) {
     return (
-      <button type="button" className="account" onClick={() => signIn(me.data)}>
+      <Button variant="contained" onClick={() => signIn(me.data)}>
         Sign in
-      </button>
+      </Button>
     )
   }
   return (
-    <div className="account">
-      <span>Signed in as {me.data.username}</span>{' '}
-      <button type="button" onClick={() => signOut.mutate()} disabled={signOut.isPending}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Typography variant="body2" color="text.secondary">
+        Signed in as {me.data.username}
+      </Typography>
+      <Button variant="outlined" onClick={() => signOut.mutate()} disabled={signOut.isPending}>
         Sign out
-      </button>
-    </div>
+      </Button>
+    </Box>
   )
 }

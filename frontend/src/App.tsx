@@ -1,3 +1,5 @@
+import Typography from '@mui/material/Typography'
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
 import { BrowsePage } from './pages/BrowsePage'
@@ -6,8 +8,16 @@ import { CheckoutPage } from './pages/CheckoutPage'
 import { OrderPage, OrdersPage } from './pages/OrdersPage'
 import { ProductPage } from './pages/ProductPage'
 import { ProfilesPage } from './pages/ProfilesPage'
-import { AdminProductsPage } from './pages/admin/AdminProductsPage'
-import { ProductEditorPage } from './pages/admin/ProductEditorPage'
+
+// Catalog admin is loaded only when an admin opens it; shoppers never download it.
+const AdminProductsPage = lazy(() =>
+  import('./pages/admin/AdminProductsPage').then((m) => ({ default: m.AdminProductsPage })),
+)
+const ProductEditorPage = lazy(() =>
+  import('./pages/admin/ProductEditorPage').then((m) => ({ default: m.ProductEditorPage })),
+)
+
+const loading = <Typography>Loading…</Typography>
 
 export default function App() {
   return (
@@ -20,10 +30,10 @@ export default function App() {
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="orders/:id" element={<OrderPage />} />
-        <Route path="admin/products" element={<AdminProductsPage />} />
-        <Route path="admin/products/new" element={<ProductEditorPage />} />
-        <Route path="admin/products/:id" element={<ProductEditorPage />} />
-        <Route path="*" element={<p>Page not found.</p>} />
+        <Route path="admin/products" element={<Suspense fallback={loading}><AdminProductsPage /></Suspense>} />
+        <Route path="admin/products/new" element={<Suspense fallback={loading}><ProductEditorPage /></Suspense>} />
+        <Route path="admin/products/:id" element={<Suspense fallback={loading}><ProductEditorPage /></Suspense>} />
+        <Route path="*" element={<Typography>Page not found.</Typography>} />
       </Route>
     </Routes>
   )
