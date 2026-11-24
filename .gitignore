@@ -1,0 +1,23 @@
+# Build output
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+
+# Local tooling (OTel agent etc.)
+.tools/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# Env and secrets
+.env
+.env.*
+!.env.example
