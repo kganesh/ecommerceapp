@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: ecommerceapp
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    build:
+      enabled: true
+
+springdoc:
+  writer-with-default-pretty-printer: true
+  writer-with-order-by-keys: true
