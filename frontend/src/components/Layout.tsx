@@ -1,3 +1,9 @@
+import StorefrontOutlined from '@mui/icons-material/StorefrontOutlined'
+import ChildCareOutlined from '@mui/icons-material/ChildCareOutlined'
+import ShoppingCartOutlined from '@mui/icons-material/ShoppingCartOutlined'
+import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined'
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import Alert from '@mui/material/Alert'
 import AppBar from '@mui/material/AppBar'
 import Badge from '@mui/material/Badge'
@@ -14,12 +20,13 @@ import { tokens } from '../theme'
 import { AccountMenu } from './AccountMenu'
 import { BackendStatus } from './BackendStatus'
 
-function NavItem({ to, end, children }: { to: string; end?: boolean; children: ReactNode }) {
+function NavItem({ to, end, icon, children }: { to: string; end?: boolean; icon: ReactNode; children: ReactNode }) {
   return (
     <Button
       component={NavLink}
       to={to}
       end={end}
+      startIcon={icon}
       color="inherit"
       sx={{
         color: tokens.muted,
@@ -67,12 +74,14 @@ export function Layout() {
               </Typography>
             </Box>
             <Box component="nav" aria-label="Main" sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', flexGrow: 1 }}>
-              <NavItem to="/" end>
+              <NavItem to="/" end icon={<StorefrontOutlined />}>
                 Shop
               </NavItem>
-              {isShopper && <NavItem to="/profiles">My children</NavItem>}
+              {isShopper && <NavItem to="/profiles" icon={<ChildCareOutlined />}>
+                  My children
+                </NavItem>}
               {isShopper && (
-                <NavItem to="/cart">
+                <NavItem to="/cart" icon={<ShoppingCartOutlined />}>
                   <Badge
                     badgeContent={items}
                     color="primary"
@@ -83,8 +92,12 @@ export function Layout() {
                   </Badge>
                 </NavItem>
               )}
-              {isShopper && <NavItem to="/orders">Orders</NavItem>}
-              {hasRole(me.data, 'CATALOG_ADMIN') && <NavItem to="/admin/products">Catalog admin</NavItem>}
+              {isShopper && <NavItem to="/orders" icon={<ReceiptLongOutlined />}>
+                  Orders
+                </NavItem>}
+              {hasRole(me.data, 'CATALOG_ADMIN') && <NavItem to="/admin/products" icon={<Inventory2Outlined />}>
+                  Catalog admin
+                </NavItem>}
             </Box>
             <AccountMenu />
           </Toolbar>
@@ -105,7 +118,8 @@ export function Layout() {
           maxWidth="lg"
           sx={{ py: 2.5, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'space-between' }}
         >
-          <Typography variant="body2" sx={{ maxWidth: '60ch' }}>
+          <Typography variant="body2" sx={{ maxWidth: '60ch', display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+            <InfoOutlined fontSize="small" aria-hidden sx={{ color: tokens.sage, mt: '2px' }} />
             Always read the label on the package. This app helps you check, but the label is the final word.
           </Typography>
           <BackendStatus />

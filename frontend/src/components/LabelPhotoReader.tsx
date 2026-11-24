@@ -1,3 +1,4 @@
+import PlaylistAddCheckOutlined from '@mui/icons-material/PlaylistAddCheckOutlined'
 import PhotoCameraOutlined from '@mui/icons-material/PhotoCameraOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -104,7 +105,7 @@ function Review({ result, onApply }: { result: LabelExtraction; onApply: () => v
         </Alert>
       )}
       <Box>
-        <Button variant="outlined" onClick={onApply}>
+        <Button variant="outlined" startIcon={<PlaylistAddCheckOutlined />} onClick={onApply}>
           Use these in the allergen editor
         </Button>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>

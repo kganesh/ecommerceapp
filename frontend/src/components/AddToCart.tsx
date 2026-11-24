@@ -1,3 +1,5 @@
+import CloseOutlined from '@mui/icons-material/CloseOutlined'
+import DoneOutlined from '@mui/icons-material/DoneOutlined'
 import AddShoppingCart from '@mui/icons-material/AddShoppingCart'
 import Alert from '@mui/material/Alert'
 import AlertTitle from '@mui/material/AlertTitle'
@@ -60,10 +62,10 @@ export function WarningPanel({
         It has not been added to your cart.
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-        <Button variant="contained" onClick={onCancel} autoFocus>
+        <Button variant="contained" startIcon={<CloseOutlined />} onClick={onCancel} autoFocus>
           Don't add
         </Button>
-        <Button variant="outlined" color="inherit" onClick={onConfirm} disabled={busy}>
+        <Button variant="outlined" color="inherit" startIcon={<DoneOutlined />} onClick={onConfirm} disabled={busy}>
           I understand, add anyway
         </Button>
       </Box>
@@ -81,7 +83,7 @@ export function AddToCart({ productId }: { productId: string }) {
 
   if (!me.data?.authenticated) {
     return (
-      <Button variant="outlined" onClick={() => signIn(me.data)}>
+      <Button variant="outlined" startIcon={<AddShoppingCart />} onClick={() => signIn(me.data)}>
         Sign in to add to cart
       </Button>
     )
