@@ -60,6 +60,28 @@ class FailSafeTest extends IntegrationTest {
     }
 
     @Test
+    void checkoutChargesNothingAndPlacesNoOrderWhenTheCheckCannotRun() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        RequestPostProcessor parent = ShopFixtures.shopper(subject);
+        String product = shop.product("Corn Chips", "[]");
+        // Put the item in the cart directly: adding through the API is (correctly) refused here.
+        mvc.perform(get("/api/v1/me").with(parent)).andExpect(status().isOk());
+        UUID userId = jdbc.sql("SELECT id FROM app_user WHERE oidc_subject = :s").param("s", subject)
+                .query(UUID.class).single();
+        UUID cartId = UUID.randomUUID();
+        jdbc.sql("INSERT INTO cart (id, user_id) VALUES (:id, :userId)").param("id", cartId).param("userId", userId).update();
+        jdbc.sql("INSERT INTO cart_item (cart_id, product_id, qty, allergen_version_at_add) VALUES (:c, :p, 1, 1)")
+                .param("c", cartId).param("p", UUID.fromString(product)).update();
+
+        shop.checkout(parent, ShopFixtures.newKey(), "tok_test_approve", null)
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("ALLERGEN_CHECK_UNAVAILABLE"));
+        long orders = jdbc.sql("SELECT count(*) FROM customer_order WHERE user_id = :u").param("u", userId)
+                .query(Long.class).single();
+        org.assertj.core.api.Assertions.assertThat(orders).isZero();
+    }
+
+    @Test
     void cartReadFailsRatherThanShowingStaleStatuses() throws Exception {
         mvc.perform(get("/api/v1/carts/me").with(newShopper()))
                 .andExpect(status().isServiceUnavailable())

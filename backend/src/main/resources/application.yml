@@ -45,6 +45,10 @@ app:
     end-session-uri: ${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/logout
     # ID-token claim holding the user's roles (Keycloak mapper: "roles"; Cognito: "cognito:groups").
     roles-claim: ${OIDC_ROLES_CLAIM:roles}
+  payments:
+    # "test" accepts only test tokens (tok_test_approve / tok_test_decline). The real
+    # hosted provider is chosen before M5 (spec: Items awaiting sign-off).
+    provider: ${PAYMENTS_PROVIDER:test}
 
 server:
   shutdown: graceful

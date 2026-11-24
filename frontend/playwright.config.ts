@@ -4,7 +4,9 @@ import { defineConfig, devices } from '@playwright/test'
 // as the spec's per-milestone local checks require.
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  // The local checks share the seeded parent1 account and cart, so run one at a time.
+  fullyParallel: false,
+  workers: 1,
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {

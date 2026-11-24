@@ -29,7 +29,11 @@ public final class ShopFixtures {
 
     /** A new shopper with a fresh identity-provider subject. */
     public static RequestPostProcessor newShopper() {
-        String subject = UUID.randomUUID().toString();
+        return shopper(UUID.randomUUID().toString());
+    }
+
+    /** A shopper with a known identity-provider subject. */
+    public static RequestPostProcessor shopper(String subject) {
         return oidcLogin()
                 .idToken(token -> token.subject(subject).claim("preferred_username", "p-" + subject.substring(0, 8)))
                 .authorities(new SimpleGrantedAuthority("ROLE_SHOPPER"));
@@ -77,6 +81,22 @@ public final class ShopFixtures {
         return mvc.perform(post("/api/v1/carts/me/items").with(shopper).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"productId\": \"" + productId + "\", \"qty\": 1" + token + "}"));
+    }
+
+    public ResultActions checkout(RequestPostProcessor shopper, String idempotencyKey, String paymentToken,
+                                  String ackToken) throws Exception {
+        String token = ackToken == null ? "" : ", \"ackToken\": \"" + ackToken + "\"";
+        var request = post("/api/v1/carts/me/checkout").with(shopper).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"paymentToken\": \"" + paymentToken + "\"" + token + "}");
+        if (idempotencyKey != null) {
+            request = request.header("Idempotency-Key", idempotencyKey);
+        }
+        return mvc.perform(request);
+    }
+
+    public static String newKey() {
+        return "chk-" + UUID.randomUUID();
     }
 
     public static String json(ResultActions result, String path) throws Exception {

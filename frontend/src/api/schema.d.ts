@@ -108,6 +108,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/carts/me/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-check the cart, then charge and place the order */
+        post: operations["checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/carts/me/items": {
         parameters: {
             query?: never;
@@ -169,6 +186,40 @@ export interface paths {
         };
         /** Name and version of the running backend */
         get: operations["getMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in parent's orders, newest first */
+        get: operations["listOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One order, with any allergen warnings acknowledged for it */
+        get: operations["getOrder"];
         put?: never;
         post?: never;
         delete?: never;
@@ -268,6 +319,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The warning the parent acknowledged for an order line */
+        AcknowledgedWarning: {
+            /** Format: date-time */
+            acknowledgedAt?: string;
+            /** @description ADD_TO_CART or CHECKOUT */
+            context: string;
+            matches: components["schemas"]["SafetyMatch"][];
+            /** Format: date-time */
+            shownAt: string;
+            unverified: boolean;
+        };
         /** @description Add a product. Resend with ackToken after the parent confirms a 409 allergen warning. */
         AddItemRequest: {
             /**
@@ -389,6 +451,26 @@ export interface components {
             /** @description True when the product has no allergen data: unable to verify */
             unverified: boolean;
         };
+        /** @description Place the order. Send the same Idempotency-Key header on every retry of this checkout. */
+        CheckoutRequest: {
+            /**
+             * Format: uuid
+             * @description From the 409 CHECKOUT_ALLERGEN_WARNING response, after the parent confirmed
+             */
+            ackToken?: string;
+            /** @description Payment token from the provider. Test provider: tok_test_approve or tok_test_decline */
+            paymentToken: string;
+        };
+        /** @description 409 body from checkout: no order placed, nothing charged. Show every line's matches; if the parent confirms, resend checkout with ackToken and the same Idempotency-Key. */
+        CheckoutWarning: {
+            /** Format: date-time */
+            ackExpiresAt: string;
+            /** Format: uuid */
+            ackToken: string;
+            /** @enum {string} */
+            code: "CHECKOUT_ALLERGEN_WARNING";
+            lines: components["schemas"]["LineWarning"][];
+        };
         /** @description Create a product. Omit allergens if the label data is not yet known. */
         CreateProductRequest: {
             /** @description Allergens for version 1. Omit for 'no allergen data yet'; send [] for 'verified: none'. */
@@ -404,6 +486,17 @@ export interface components {
             priceCents: number;
             sku: string;
         };
+        /** @description A cart line that needs the parent's confirmation before the order is placed */
+        LineWarning: {
+            affectedProfiles: components["schemas"]["AffectedProfile"][];
+            /** Format: int32 */
+            allergenVersion?: number;
+            matches: components["schemas"]["SafetyMatch"][];
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            unverified: boolean;
+        };
         /** @description The current browser session. Tokens are never exposed; only identity and roles. */
         Me: {
             authenticated: boolean;
@@ -414,6 +507,39 @@ export interface components {
             roles: string[];
             /** @description Present when signed in */
             username?: string;
+        };
+        /** @description A placed order */
+        Order: {
+            currency: string;
+            /** Format: uuid */
+            id: string;
+            lines: components["schemas"]["OrderLine"][];
+            paymentReference: string;
+            /** Format: date-time */
+            placedAt: string;
+            /** @enum {string} */
+            status: "PLACED";
+            /** Format: int64 */
+            totalCents: number;
+        };
+        /** @description One line of a placed order, as sold */
+        OrderLine: {
+            /** @description Present when the parent confirmed an allergen warning for this line */
+            acknowledgedWarning?: components["schemas"]["AcknowledgedWarning"];
+            /**
+             * Format: int32
+             * @description Allergen version sold; absent if the product had no allergen data
+             */
+            allergenVersion?: number;
+            /** Format: int64 */
+            lineTotalCents: number;
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            /** Format: int32 */
+            qty: number;
+            /** Format: int64 */
+            unitPriceCents: number;
         };
         ProblemDetail: {
             detail?: string;
@@ -726,6 +852,69 @@ export interface operations {
             };
         };
     };
+    checkout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Unique per checkout attempt; reuse it on retries */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Same Idempotency-Key as a placed order: that order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            /** @description Order placed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"];
+                };
+            };
+            /** @description Payment declined; no order placed */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Allergen confirmation needed (CHECKOUT_ALLERGEN_WARNING), or PRODUCT_UNAVAILABLE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutWarning"];
+                };
+            };
+            /** @description Allergen check unavailable; nothing charged */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     addCartItem: {
         parameters: {
             query?: never;
@@ -852,6 +1041,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppMeta"];
+                };
+            };
+        };
+    };
+    listOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"][];
+                };
+            };
+        };
+    };
+    getOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Order"];
                 };
             };
         };
