@@ -52,6 +52,11 @@ frontend: ## Run the Vite dev server (proxies /api to :8080)
 	cd frontend && npm install --no-audit --no-fund && npm run dev
 
 seed: ## Load local seed data (local only, never in prod)
+	@if [ "$$($(COMPOSE) exec -T postgres psql -U ecommerce -d ecommerce -tAc "SELECT to_regclass('public.product') IS NOT NULL")" != "t" ]; then \
+	  echo "seed: database tables don't exist yet. Start the backend first ('make app'), wait for"; \
+	  echo "      'Started EcommerceApplication' (Flyway creates the tables on startup), then run 'make seed' again."; \
+	  exit 1; \
+	fi
 	@for f in local/seed/*.sql; do \
 	  echo "seed: $$f"; \
 	  $(COMPOSE) exec -T postgres psql -U ecommerce -d ecommerce -v ON_ERROR_STOP=1 -q < $$f || exit 1; \
