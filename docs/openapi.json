@@ -1,0 +1,55 @@
+{
+  "components" : {
+    "schemas" : {
+      "AppMeta" : {
+        "description" : "Identifies the running backend build",
+        "properties" : {
+          "name" : {
+            "description" : "Application name",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "Build version",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "version" ],
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Nut-allergy safe shopping app. Contract source of truth: docs/openapi.json",
+    "title" : "ecommerceapp API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/v1/meta" : {
+      "get" : {
+        "operationId" : "getMeta",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AppMeta"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Name and version of the running backend",
+        "tags" : [ "meta" ]
+      }
+    }
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ],
+  "tags" : [ {
+    "description" : "Build and runtime information",
+    "name" : "meta"
+  } ]
+}

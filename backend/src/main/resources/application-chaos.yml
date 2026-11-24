@@ -1,0 +1,9 @@
+# Use together with `local`: SPRING_PROFILES_ACTIVE=local,chaos
+# Routes Postgres and Redis through Toxiproxy (compose service `toxiproxy`)
+# so fail-safe behaviour can be tested by injecting faults (spec: M3 local check).
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:25432/ecommerce
+  data:
+    redis:
+      port: 26379

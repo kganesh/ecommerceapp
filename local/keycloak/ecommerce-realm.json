@@ -1,0 +1,69 @@
+{
+  "realm": "ecommerce",
+  "enabled": true,
+  "displayName": "Ecommerce (local)",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "sslRequired": "none",
+  "roles": {
+    "realm": [
+      { "name": "SHOPPER", "description": "Parent or guardian who shops" },
+      { "name": "CATALOG_ADMIN", "description": "Enters and edits product and allergen data" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "ecommerce-bff",
+      "name": "Ecommerce backend-for-frontend (local)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "local-dev-bff-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:8080/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "parent1",
+      "email": "parent1@example.test",
+      "firstName": "Parent",
+      "lastName": "One",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "parent1", "temporary": false }],
+      "realmRoles": ["SHOPPER"]
+    },
+    {
+      "username": "parent2",
+      "email": "parent2@example.test",
+      "firstName": "Parent",
+      "lastName": "Two",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "parent2", "temporary": false }],
+      "realmRoles": ["SHOPPER"]
+    },
+    {
+      "username": "admin1",
+      "email": "admin1@example.test",
+      "firstName": "Catalog",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "admin1", "temporary": false }],
+      "realmRoles": ["CATALOG_ADMIN"]
+    }
+  ]
+}
