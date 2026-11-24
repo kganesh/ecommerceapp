@@ -33,7 +33,9 @@ spring:
             authorization-uri: ${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/auth
             token-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/token
             jwk-set-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/certs
-            user-info-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/userinfo
+            # No user-info-uri on purpose: username, email and roles come from the signed ID
+            # token. Calling UserInfo over the internal URL fails when the identity provider
+            # issued the token under the browser URL (Codespaces, any proxy): 401.
             user-name-attribute: preferred_username
 
 app:
