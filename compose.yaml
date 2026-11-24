@@ -22,7 +22,7 @@ services:
 
   redis:
     # Stand-in for Amazon ElastiCache. Sessions (BFF, from M2) + cache.
-    image: redis:7.4-alpine
+    image: redis:8.0-alpine
     ports:
       - "6379:6379"
     healthcheck:
