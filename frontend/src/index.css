@@ -189,3 +189,73 @@ form.inline {
   gap: 0.4rem;
   align-items: baseline;
 }
+
+.safety {
+  margin: 0.5rem 0 0;
+}
+
+.safety.warning {
+  font-weight: 600;
+  border-left: 4px solid currentColor;
+  padding-left: 0.5rem;
+}
+
+.safety p {
+  margin: 0;
+}
+
+.match-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+  font-weight: 400;
+}
+
+.warning-panel {
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.warning-panel h4 {
+  margin: 0 0 0.5rem;
+}
+
+.warning-panel .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.add-to-cart {
+  margin-top: 0.5rem;
+}
+
+.cart-lines {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.cart-line {
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.cart-line h3 {
+  margin: 0;
+}
+
+.total {
+  font-size: 1.1rem;
+}
+
+a.button {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-weight: 600;
+}

@@ -9,7 +9,7 @@ import {
 
 export const catalogKeys = {
   allergens: ['allergens'] as const,
-  search: (q: string, page: number) => ['products', 'search', q, page] as const,
+  search: (q: string, page: number, hideUnsafe: boolean) => ['products', 'search', q, page, hideUnsafe] as const,
   product: (id: string) => ['products', id] as const,
   adminSearch: (q: string, page: number) => ['admin', 'products', q, page] as const,
   adminProduct: (id: string) => ['admin', 'products', id] as const,
@@ -24,11 +24,15 @@ export function useAllergens() {
   })
 }
 
-export function useProductSearch(q: string, page = 0) {
+export function useProductSearch(q: string, page = 0, hideUnsafe = false) {
   return useQuery({
-    queryKey: catalogKeys.search(q, page),
+    queryKey: catalogKeys.search(q, page, hideUnsafe),
     queryFn: async () =>
-      unwrap(await api.GET('/api/v1/products', { params: { query: { q: q || undefined, page, size: 20 } } })),
+      unwrap(
+        await api.GET('/api/v1/products', {
+          params: { query: { q: q || undefined, page, size: 20, hideUnsafe: hideUnsafe || undefined } },
+        }),
+      ),
     placeholderData: keepPreviousData,
   })
 }

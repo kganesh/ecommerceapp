@@ -35,13 +35,33 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public ProductPage search(String query, boolean activeOnly, int page, int size) {
+        return search(query, activeOnly, null, page, size);
+    }
+
+    /**
+     * @param hideUnsafeFor when set, leaves out products that match any of this user's
+     *                      children's avoid lists, and products with no allergen data (FR-5)
+     */
+    @Transactional(readOnly = true)
+    public ProductPage search(String query, boolean activeOnly, UUID hideUnsafeFor, int page, int size) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new ApiExceptions.BadRequest("BAD_PAGE",
                     "page must be >= 0 and size between 1 and " + MAX_PAGE_SIZE);
         }
-        List<ProductRow> rows = repository.findPage(query, activeOnly, size, (long) page * size);
-        long total = repository.count(query, activeOnly);
+        List<ProductRow> rows = repository.findPage(query, activeOnly, hideUnsafeFor, size, (long) page * size);
+        long total = repository.count(query, activeOnly, hideUnsafeFor);
         return new ProductPage(toProducts(rows), page, size, total);
+    }
+
+    /** Products by id, active or not, keyed by id. Missing ids are absent. */
+    @Transactional(readOnly = true)
+    public Map<UUID, Product> getMany(java.util.Collection<UUID> ids) {
+        Map<UUID, Product> result = new java.util.LinkedHashMap<>();
+        if (ids.isEmpty()) {
+            return result;
+        }
+        toProducts(repository.findByIds(ids)).forEach(p -> result.put(p.id(), p));
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -115,7 +135,7 @@ public class CatalogService {
                 .map(row -> new Product(
                         row.id(), row.sku(), row.name(), row.description(), row.priceCents(), row.currency(),
                         row.active(), row.currentAllergenVersion(), row.currentAllergenVersion() != null,
-                        allergens.getOrDefault(row.id(), List.of())))
+                        allergens.getOrDefault(row.id(), List.of()), null))
                 .toList();
     }
 }

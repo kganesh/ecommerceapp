@@ -1,5 +1,6 @@
 package com.kganesh.ecommerce.catalog;
 
+import com.kganesh.ecommerce.safety.SafetyDtos.ProductSafety;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -48,7 +49,14 @@ public final class CatalogDtos {
             @Schema(requiredMode = REQUIRED,
                     description = "False when no allergen data exists. Clients must show 'Unable to verify allergens', never 'safe'.")
             boolean allergenDataAvailable,
-            @Schema(requiredMode = REQUIRED) List<ProductAllergen> allergens) {
+            @Schema(requiredMode = REQUIRED) List<ProductAllergen> allergens,
+            @Schema(description = "Allergen check for the signed-in parent's children; absent for visitors and non-shoppers")
+            ProductSafety safety) {
+
+        public Product withSafety(ProductSafety newSafety) {
+            return new Product(id, sku, name, description, priceCents, currency, active, allergenVersion,
+                    allergenDataAvailable, allergens, newSafety);
+        }
     }
 
     @Schema(description = "One page of products")

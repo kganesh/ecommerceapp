@@ -21,6 +21,9 @@
     "description" : "Browse and search the catalog",
     "name" : "products"
   }, {
+    "description" : "The signed-in parent's cart; every add is allergen-checked",
+    "name" : "cart"
+  }, {
     "description" : "Child profiles and their avoid lists",
     "name" : "profiles"
   }, {
@@ -255,6 +258,138 @@
         "tags" : [ "allergens" ]
       }
     },
+    "/api/v1/carts/me" : {
+      "get" : {
+        "operationId" : "getCart",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "The cart, with each line re-checked against current data",
+        "tags" : [ "cart" ]
+      }
+    },
+    "/api/v1/carts/me/items" : {
+      "post" : {
+        "operationId" : "addCartItem",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AddItemRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description" : "Added"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AllergenWarning"
+                }
+              }
+            },
+            "description" : "Allergen warning: nothing added; resend with ackToken to confirm"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description" : "Allergen check unavailable: nothing added"
+          }
+        },
+        "summary" : "Add a product; 409 with an allergen warning if any child's avoid list matches",
+        "tags" : [ "cart" ]
+      }
+    },
+    "/api/v1/carts/me/items/{productId}" : {
+      "delete" : {
+        "operationId" : "removeCartItem",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "productId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Remove a line",
+        "tags" : [ "cart" ]
+      },
+      "patch" : {
+        "operationId" : "updateCartItem",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "productId",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateQtyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Change a line's quantity",
+        "tags" : [ "cart" ]
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "operationId" : "getMe",
@@ -305,6 +440,14 @@
           }
         }, {
           "in" : "query",
+          "name" : "hideUnsafe",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        }, {
+          "in" : "query",
           "name" : "page",
           "required" : false,
           "schema" : {
@@ -334,7 +477,7 @@
             "description" : "OK"
           }
         },
-        "summary" : "Search active products by name or SKU",
+        "summary" : "Search active products; shoppers get per-child allergen results and can hide matches",
         "tags" : [ "products" ]
       }
     },
@@ -513,6 +656,43 @@
   },
   "components" : {
     "schemas" : {
+      "AddItemRequest" : {
+        "type" : "object",
+        "description" : "Add a product. Resend with ackToken after the parent confirms a 409 allergen warning.",
+        "properties" : {
+          "ackToken" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "From the 409 ALLERGEN_WARNING response, after the parent confirmed"
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "qty" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Defaults to 1",
+            "maximum" : 99,
+            "minimum" : 1
+          }
+        },
+        "required" : [ "productId" ]
+      },
+      "AffectedProfile" : {
+        "type" : "object",
+        "description" : "A child profile affected by a warning",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "label" ]
+      },
       "Allergen" : {
         "type" : "object",
         "description" : "A node in the allergen taxonomy. Matching is by id, never by name or synonym.",
@@ -555,6 +735,54 @@
           }
         },
         "required" : [ "allergenId", "matchType" ]
+      },
+      "AllergenWarning" : {
+        "type" : "object",
+        "description" : "409 body from add-to-cart: nothing was added. Show every match (child, allergen, contains / may contain) and, if the parent confirms, resend the request with ackToken.",
+        "properties" : {
+          "ackExpiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ackToken" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Single use; void if the product's allergens or any avoid list changes"
+          },
+          "affectedProfiles" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AffectedProfile"
+            }
+          },
+          "allergenVersion" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Allergen version the warning is based on; absent when the product has no allergen data"
+          },
+          "code" : {
+            "type" : "string",
+            "enum" : [ "ALLERGEN_WARNING" ]
+          },
+          "matches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SafetyMatch"
+            }
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "unverified" : {
+            "type" : "boolean",
+            "description" : "True when the product has no allergen data: unable to verify"
+          }
+        },
+        "required" : [ "ackExpiresAt", "ackToken", "affectedProfiles", "code", "matches", "productId", "productName", "unverified" ]
       },
       "AppMeta" : {
         "type" : "object",
@@ -611,6 +839,73 @@
           }
         },
         "required" : [ "allergenIds" ]
+      },
+      "Cart" : {
+        "type" : "object",
+        "description" : "The signed-in parent's cart",
+        "properties" : {
+          "currency" : {
+            "type" : "string",
+            "example" : "USD"
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CartLine"
+            }
+          },
+          "needsAcknowledgment" : {
+            "type" : "boolean",
+            "description" : "True if any line needs acknowledging before checkout"
+          },
+          "totalCents" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "currency", "lines", "needsAcknowledgment", "totalCents" ]
+      },
+      "CartLine" : {
+        "type" : "object",
+        "description" : "One cart line with its allergen status, re-checked on every read",
+        "properties" : {
+          "affectedProfiles" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AffectedProfile"
+            }
+          },
+          "available" : {
+            "type" : "boolean",
+            "description" : "False when the product is no longer sold"
+          },
+          "lineTotalCents" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "matches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SafetyMatch"
+            }
+          },
+          "product" : {
+            "$ref" : "#/components/schemas/Product"
+          },
+          "qty" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "CLEAR", "ACKNOWLEDGED", "NEEDS_ACKNOWLEDGMENT" ]
+          },
+          "unverified" : {
+            "type" : "boolean",
+            "description" : "True when the product has no allergen data: unable to verify"
+          }
+        },
+        "required" : [ "affectedProfiles", "available", "lineTotalCents", "matches", "product", "qty", "status", "unverified" ]
       },
       "CreateProductRequest" : {
         "type" : "object",
@@ -678,6 +973,33 @@
         },
         "required" : [ "authenticated", "loginUrl", "roles" ]
       },
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        }
+      },
       "Product" : {
         "type" : "object",
         "description" : "A catalog product with the allergens of its current allergen version",
@@ -718,6 +1040,10 @@
             "type" : "integer",
             "format" : "int64",
             "description" : "Price in cents"
+          },
+          "safety" : {
+            "$ref" : "#/components/schemas/ProductSafety",
+            "description" : "Allergen check for the signed-in parent's children; absent for visitors and non-shoppers"
           },
           "sku" : {
             "type" : "string"
@@ -769,6 +1095,30 @@
         },
         "required" : [ "items", "page", "size", "total" ]
       },
+      "ProductSafety" : {
+        "type" : "object",
+        "description" : "The allergen check result for one product, for the signed-in parent's children",
+        "properties" : {
+          "affectedProfiles" : {
+            "type" : "array",
+            "description" : "Children this result concerns; for UNVERIFIED, every child with an avoid list",
+            "items" : {
+              "$ref" : "#/components/schemas/AffectedProfile"
+            }
+          },
+          "matches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SafetyMatch"
+            }
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "CLEAR", "WARNING", "UNVERIFIED", "UNAVAILABLE" ]
+          }
+        },
+        "required" : [ "affectedProfiles", "matches", "status" ]
+      },
       "Profile" : {
         "type" : "object",
         "description" : "A child profile. Holds a label only: no name or date of birth.",
@@ -816,6 +1166,33 @@
         },
         "required" : [ "label" ]
       },
+      "SafetyMatch" : {
+        "type" : "object",
+        "description" : "One child whose avoid list matches one allergen on the product's label",
+        "properties" : {
+          "allergenId" : {
+            "type" : "string",
+            "example" : "TREE_NUT.CASHEW"
+          },
+          "allergenName" : {
+            "type" : "string",
+            "example" : "Cashew"
+          },
+          "matchType" : {
+            "type" : "string",
+            "enum" : [ "CONTAINS", "MAY_CONTAIN" ]
+          },
+          "profileId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "profileLabel" : {
+            "type" : "string",
+            "example" : "Child 1"
+          }
+        },
+        "required" : [ "allergenId", "allergenName", "matchType", "profileId", "profileLabel" ]
+      },
       "SetAllergensRequest" : {
         "type" : "object",
         "description" : "Replace a product's allergens. Always creates a new immutable allergen version.",
@@ -852,6 +1229,19 @@
           }
         },
         "required" : [ "active", "name", "priceCents" ]
+      },
+      "UpdateQtyRequest" : {
+        "type" : "object",
+        "description" : "Change a line's quantity",
+        "properties" : {
+          "qty" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 99,
+            "minimum" : 1
+          }
+        },
+        "required" : [ "qty" ]
       }
     }
   }

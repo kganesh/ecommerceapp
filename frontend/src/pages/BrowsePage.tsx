@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useProductSearch } from '../api/catalog'
+import { hasRole, useMe } from '../api/session'
+import { AddToCart } from '../components/AddToCart'
 import { AllergenLabel } from '../components/AllergenLabel'
+import { SafetyNotice } from '../components/SafetyNotice'
 import { formatPrice } from '../lib/format'
 import { ErrorNotice } from '../components/ErrorNotice'
 
@@ -9,12 +12,25 @@ import { ErrorNotice } from '../components/ErrorNotice'
 export function BrowsePage() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
+  const hideUnsafe = params.get('hideUnsafe') === 'true'
   const [draft, setDraft] = useState(q)
-  const search = useProductSearch(q)
+  const me = useMe()
+  const isShopper = hasRole(me.data, 'SHOPPER')
+  const search = useProductSearch(q, 0, isShopper && hideUnsafe)
+
+  const setHideUnsafe = (hide: boolean) => {
+    const next = new URLSearchParams(params)
+    if (hide) next.set('hideUnsafe', 'true')
+    else next.delete('hideUnsafe')
+    setParams(next)
+  }
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    setParams(draft.trim() ? { q: draft.trim() } : {})
+    const next = new URLSearchParams(params)
+    if (draft.trim()) next.set('q', draft.trim())
+    else next.delete('q')
+    setParams(next)
   }
 
   return (
@@ -25,6 +41,12 @@ export function BrowsePage() {
         <input id="q" type="search" value={draft} onChange={(e) => setDraft(e.target.value)} />
         <button type="submit">Search</button>
       </form>
+      {isShopper && (
+        <label className="checkbox">
+          <input type="checkbox" checked={hideUnsafe} onChange={(e) => setHideUnsafe(e.target.checked)} />
+          Hide products that match my children's avoid lists or can't be verified
+        </label>
+      )}
 
       {search.isPending && <p>Loading products…</p>}
       {search.isError && <ErrorNotice error={search.error} />}
@@ -38,6 +60,8 @@ export function BrowsePage() {
               </h3>
               <p className="price">{formatPrice(product.priceCents, product.currency)}</p>
               <AllergenLabel product={product} />
+              <SafetyNotice safety={product.safety} />
+              <AddToCart productId={product.id} />
             </li>
           ))}
         </ul>
