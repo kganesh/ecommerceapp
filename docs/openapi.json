@@ -1,30 +1,254 @@
 {
-  "components" : {
-    "schemas" : {
-      "AppMeta" : {
-        "description" : "Identifies the running backend build",
-        "properties" : {
-          "name" : {
-            "description" : "Application name",
-            "type" : "string"
-          },
-          "version" : {
-            "description" : "Build version",
-            "type" : "string"
-          }
-        },
-        "required" : [ "name", "version" ],
-        "type" : "object"
-      }
-    }
-  },
+  "openapi" : "3.1.0",
   "info" : {
     "description" : "Nut-allergy safe shopping app. Contract source of truth: docs/openapi.json",
     "title" : "ecommerceapp API",
     "version" : "v1"
   },
-  "openapi" : "3.1.0",
+  "servers" : [ {
+    "url" : "/"
+  } ],
+  "tags" : [ {
+    "description" : "Allergen taxonomy for avoid lists and product tagging",
+    "name" : "allergens"
+  }, {
+    "description" : "Catalog administration; CATALOG_ADMIN only",
+    "name" : "admin-products"
+  }, {
+    "description" : "Browse and search the catalog",
+    "name" : "products"
+  }, {
+    "description" : "Build and runtime information",
+    "name" : "meta"
+  } ],
   "paths" : {
+    "/api/v1/admin/products" : {
+      "get" : {
+        "operationId" : "adminSearchProducts",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProductPage"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Search all products, including inactive ones",
+        "tags" : [ "admin-products" ]
+      },
+      "post" : {
+        "operationId" : "adminCreateProduct",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateProductRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Product"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "summary" : "Create a product, optionally with allergen version 1",
+        "tags" : [ "admin-products" ]
+      }
+    },
+    "/api/v1/admin/products/{id}" : {
+      "get" : {
+        "operationId" : "adminGetProduct",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Product"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "A product, active or not",
+        "tags" : [ "admin-products" ]
+      },
+      "put" : {
+        "operationId" : "adminUpdateProduct",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Product"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Update name, description, price and active flag",
+        "tags" : [ "admin-products" ]
+      }
+    },
+    "/api/v1/admin/products/{id}/allergens" : {
+      "put" : {
+        "operationId" : "adminSetProductAllergens",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetAllergensRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Product"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Replace allergens; creates a new immutable version",
+        "tags" : [ "admin-products" ]
+      }
+    },
+    "/api/v1/admin/products/{id}/audit" : {
+      "get" : {
+        "operationId" : "adminProductAudit",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AuditEntry"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Every edit to a product, oldest first",
+        "tags" : [ "admin-products" ]
+      }
+    },
+    "/api/v1/allergens" : {
+      "get" : {
+        "operationId" : "listAllergens",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Allergen"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "The full allergen taxonomy, roots before children",
+        "tags" : [ "allergens" ]
+      }
+    },
     "/api/v1/meta" : {
       "get" : {
         "operationId" : "getMeta",
@@ -43,13 +267,333 @@
         "summary" : "Name and version of the running backend",
         "tags" : [ "meta" ]
       }
+    },
+    "/api/v1/products" : {
+      "get" : {
+        "operationId" : "searchProducts",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProductPage"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Search active products by name or SKU",
+        "tags" : [ "products" ]
+      }
+    },
+    "/api/v1/products/{id}" : {
+      "get" : {
+        "operationId" : "getProduct",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Product"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "An active product with its current allergens",
+        "tags" : [ "products" ]
+      }
     }
   },
-  "servers" : [ {
-    "url" : "/"
-  } ],
-  "tags" : [ {
-    "description" : "Build and runtime information",
-    "name" : "meta"
-  } ]
+  "components" : {
+    "schemas" : {
+      "Allergen" : {
+        "type" : "object",
+        "description" : "A node in the allergen taxonomy. Matching is by id, never by name or synonym.",
+        "properties" : {
+          "displayName" : {
+            "type" : "string",
+            "example" : "Cashew"
+          },
+          "id" : {
+            "type" : "string",
+            "example" : "TREE_NUT.CASHEW"
+          },
+          "parentId" : {
+            "type" : "string",
+            "description" : "Parent node id; absent for a root such as PEANUT or TREE_NUT",
+            "example" : "TREE_NUT"
+          },
+          "synonyms" : {
+            "type" : "array",
+            "description" : "Label terms that indicate this allergen; for tagging only",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "displayName", "id", "synonyms" ]
+      },
+      "AllergenEntry" : {
+        "type" : "object",
+        "description" : "An allergen to put on a product's label",
+        "properties" : {
+          "allergenId" : {
+            "type" : "string",
+            "example" : "TREE_NUT.CASHEW",
+            "minLength" : 1
+          },
+          "matchType" : {
+            "type" : "string",
+            "enum" : [ "CONTAINS", "MAY_CONTAIN" ]
+          }
+        },
+        "required" : [ "allergenId", "matchType" ]
+      },
+      "AppMeta" : {
+        "type" : "object",
+        "description" : "Identifies the running backend build",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Application name"
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "Build version"
+          }
+        },
+        "required" : [ "name", "version" ]
+      },
+      "AuditEntry" : {
+        "type" : "object",
+        "description" : "One catalog edit",
+        "properties" : {
+          "action" : {
+            "type" : "string",
+            "enum" : [ "PRODUCT_CREATED", "PRODUCT_UPDATED", "ALLERGENS_CHANGED" ]
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "at" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "fromVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "toVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "action", "actor", "at" ]
+      },
+      "CreateProductRequest" : {
+        "type" : "object",
+        "description" : "Create a product. Omit allergens if the label data is not yet known.",
+        "properties" : {
+          "allergens" : {
+            "type" : "array",
+            "description" : "Allergens for version 1. Omit for 'no allergen data yet'; send [] for 'verified: none'.",
+            "items" : {
+              "$ref" : "#/components/schemas/AllergenEntry"
+            }
+          },
+          "currency" : {
+            "type" : "string",
+            "description" : "ISO 4217 code; defaults to USD",
+            "example" : "USD",
+            "pattern" : "[A-Z]{3}"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "priceCents" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "sku" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "name", "priceCents", "sku" ]
+      },
+      "Product" : {
+        "type" : "object",
+        "description" : "A catalog product with the allergens of its current allergen version",
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "allergenDataAvailable" : {
+            "type" : "boolean",
+            "description" : "False when no allergen data exists. Clients must show 'Unable to verify allergens', never 'safe'."
+          },
+          "allergenVersion" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Current allergen version; absent when no allergen data has been entered"
+          },
+          "allergens" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProductAllergen"
+            }
+          },
+          "currency" : {
+            "type" : "string",
+            "example" : "USD"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "priceCents" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Price in cents"
+          },
+          "sku" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "active", "allergenDataAvailable", "allergens", "currency", "id", "name", "priceCents", "sku" ]
+      },
+      "ProductAllergen" : {
+        "type" : "object",
+        "description" : "An allergen on a product's label, at the product's current allergen version",
+        "properties" : {
+          "allergenId" : {
+            "type" : "string",
+            "example" : "TREE_NUT.CASHEW"
+          },
+          "displayName" : {
+            "type" : "string",
+            "example" : "Cashew"
+          },
+          "matchType" : {
+            "type" : "string",
+            "enum" : [ "CONTAINS", "MAY_CONTAIN" ]
+          }
+        },
+        "required" : [ "allergenId", "displayName", "matchType" ]
+      },
+      "ProductPage" : {
+        "type" : "object",
+        "description" : "One page of products",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Product"
+            }
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "items", "page", "size", "total" ]
+      },
+      "SetAllergensRequest" : {
+        "type" : "object",
+        "description" : "Replace a product's allergens. Always creates a new immutable allergen version.",
+        "properties" : {
+          "allergens" : {
+            "type" : "array",
+            "description" : "Complete allergen list; [] means verified to contain none",
+            "items" : {
+              "$ref" : "#/components/schemas/AllergenEntry"
+            }
+          }
+        },
+        "required" : [ "allergens" ]
+      },
+      "UpdateProductRequest" : {
+        "type" : "object",
+        "description" : "Update product details. Allergens are changed separately and create a new version.",
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "priceCents" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "active", "name", "priceCents" ]
+      }
+    }
+  }
 }

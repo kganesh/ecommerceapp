@@ -13,8 +13,8 @@ spec before or alongside the code.
 
 | Milestone | Scope | State |
 | --- | --- | --- |
-| M0 Foundations | Repo, CI, local Docker stack, skeletons | In progress |
-| M1 Catalog and taxonomy | Versioned allergens, admin catalog, RBAC | Not started |
+| M0 Foundations | Repo, CI, local Docker stack, skeletons | Done (PR #1) |
+| M1 Catalog and taxonomy | Versioned allergens, admin catalog, RBAC | In review (PR #2) |
 | M2 Identity and profiles | Cognito + BFF, child profiles, avoid lists | Not started |
 | M3 Allergen check and cart | Warning contract, fail-safe, audit | Not started |
 | M4 Checkout and orders | Payments, checkout re-check, order history | Not started |

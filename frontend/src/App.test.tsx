@@ -1,40 +1,18 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 import App from './App'
+import { renderWithProviders, stubFetch } from './test/render'
 
-function renderApp() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <App />
-    </QueryClientProvider>,
-  )
-}
-
-function stubFetch(routes: Record<string, { status: number; body: unknown }>) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-      const path = new URL(url, 'http://localhost').pathname
-      const route = routes[path]
-      if (!route) return new Response('not found', { status: 404 })
-      return new Response(JSON.stringify(route.body), {
-        status: route.status,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }),
-  )
-}
+const emptyPage = { status: 200, body: { items: [], page: 0, size: 20, total: 0 } }
 
 describe('App shell', () => {
   it('shows the backend as connected when meta and health respond', async () => {
     stubFetch({
       '/api/v1/meta': { status: 200, body: { name: 'ecommerceapp', version: '0.1.0-SNAPSHOT' } },
       '/actuator/health': { status: 200, body: { status: 'UP' } },
+      '/api/v1/products': emptyPage,
     })
-    renderApp()
+    renderWithProviders(<App />)
     expect(await screen.findByText(/Backend connected: ecommerceapp 0.1.0-SNAPSHOT/)).toBeInTheDocument()
   })
 
@@ -42,8 +20,15 @@ describe('App shell', () => {
     stubFetch({
       '/api/v1/meta': { status: 503, body: {} },
       '/actuator/health': { status: 503, body: {} },
+      '/api/v1/products': { status: 503, body: {} },
     })
-    renderApp()
+    renderWithProviders(<App />)
     expect(await screen.findByText(/Backend unavailable/)).toBeInTheDocument()
+  })
+
+  it('always shows the read-the-label disclaimer (FR-13)', async () => {
+    stubFetch({ '/api/v1/products': emptyPage })
+    renderWithProviders(<App />)
+    expect(await screen.findByText(/Always read the label on the package/)).toBeInTheDocument()
   })
 })

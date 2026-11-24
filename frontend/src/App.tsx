@@ -1,34 +1,21 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchHealth, fetchMeta } from './api/client'
+import { Route, Routes } from 'react-router'
+import { Layout } from './components/Layout'
+import { BrowsePage } from './pages/BrowsePage'
+import { ProductPage } from './pages/ProductPage'
+import { AdminProductsPage } from './pages/admin/AdminProductsPage'
+import { ProductEditorPage } from './pages/admin/ProductEditorPage'
 
-/** M0 shell: proves the SPA reaches the backend through the same-origin proxy. */
 export default function App() {
-  const meta = useQuery({ queryKey: ['meta'], queryFn: fetchMeta, retry: false })
-  const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth, retry: false })
-
-  const loading = meta.isPending || health.isPending
-  const connected = meta.isSuccess && health.data === 'UP'
-
   return (
-    <main className="shell">
-      <h1>Nut-Allergy Safe Shopping</h1>
-      <p className="lead">Shop with every child's avoid list checked for you.</p>
-
-      <section className="status" role="status" aria-live="polite">
-        {loading && <p>Checking backend…</p>}
-        {!loading && connected && (
-          <p>
-            <span aria-hidden="true">✔ </span>
-            Backend connected: {meta.data.name} {meta.data.version} (health {health.data})
-          </p>
-        )}
-        {!loading && !connected && (
-          <p className="problem">
-            <span aria-hidden="true">⚠ </span>
-            Backend unavailable. Start it with <code>make up &amp;&amp; make app</code>.
-          </p>
-        )}
-      </section>
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<BrowsePage />} />
+        <Route path="products/:id" element={<ProductPage />} />
+        <Route path="admin/products" element={<AdminProductsPage />} />
+        <Route path="admin/products/new" element={<ProductEditorPage />} />
+        <Route path="admin/products/:id" element={<ProductEditorPage />} />
+        <Route path="*" element={<p>Page not found.</p>} />
+      </Route>
+    </Routes>
   )
 }
