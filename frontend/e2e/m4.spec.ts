@@ -6,6 +6,7 @@ import { signInAs } from './login.ts'
 
 async function emptyCart(page: Page) {
   await page.goto('/cart')
+  await page.waitForLoadState('networkidle') // count Remove buttons only once the cart has loaded
   const remove = page.getByRole('button', { name: 'Remove' })
   while ((await remove.count()) > 0) {
     await remove.first().click()
@@ -33,7 +34,7 @@ test('M4: purchase with a confirmed warning; the order records what was confirme
   await expect(page.getByText('You confirmed this when adding to cart')).toBeVisible()
   await expect(page.getByText('Child 1: contains Almond')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Orders' }).click()
+  await page.getByRole('link', { name: 'Orders', exact: true }).click()
   await expect(page.getByRole('cell', { name: '1 confirmed' }).first()).toBeVisible()
 })
 

@@ -84,7 +84,8 @@ class SecurityConfig {
                 .addFilterBefore(new PublicBaseUrlFilter(app.publicBaseUrl()), OAuth2AuthorizationRequestRedirectFilter.class)
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessHandler(new OidcLogoutHandler(app.oidc().endSessionUri(), home)))
+                        .logoutSuccessHandler(new OidcLogoutHandler(app.oidc().endSessionUri(), home,
+                                registrations.findByRegistrationId("idp").getClientId())))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))

@@ -116,7 +116,10 @@ class IdentityTest extends IntegrationTest {
         assertThat(redirect)
                 .startsWith("http://localhost:8180/realms/ecommerce/protocol/openid-connect/logout?")
                 .contains("id_token_hint=")
-                .contains("post_logout_redirect_uri=");
+                .contains("post_logout_redirect_uri=")
+                // Cognito's logout endpoint (M5) needs these two.
+                .contains("client_id=ecommerce-bff")
+                .contains("logout_uri=");
     }
 
     @Test

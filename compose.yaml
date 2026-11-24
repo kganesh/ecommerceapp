@@ -74,11 +74,15 @@ services:
 
   backend:
     # Production-like run of the same image that goes to ECR.
-    # Build it first with `make image`; start with `make up-app`.
-    profiles: ["app"]
+    # Build it first with `make image`; start with `make up-app` (or `make up-prod`).
+    profiles: ["app", "prod"]
     image: ecommerceapp-backend:local
     environment:
       SPRING_PROFILES_ACTIVE: local
+      # Browser origin: the prod-like web server on :8081 (profile "prod").
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:8081}
+      OIDC_BROWSER_BASE: ${OIDC_BROWSER_BASE:-http://localhost:8180}
+      OIDC_INTERNAL_BASE: http://keycloak:8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce
       SPRING_DATA_REDIS_HOST: redis
       OTEL_SERVICE_NAME: ecommerceapp-backend
@@ -90,6 +94,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  web:
+    # Prod-like SPA: the built bundle behind nginx, routing API paths to the backend
+    # the way CloudFront does on AWS. Build with `make image-web`; open http://localhost:8081.
+    profiles: ["prod"]
+    image: ecommerceapp-web:local
+    ports:
+      - "8081:8080"
+    depends_on:
+      backend:
+        condition: service_started
 
 volumes:
   pgdata:

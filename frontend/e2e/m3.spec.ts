@@ -19,7 +19,7 @@ test('M3: cashew warns for Child 1, nothing is added until confirmed, then it is
   await panel.getByRole('button', { name: 'I understand, add anyway' }).click()
   await expect(card.getByText('Added.')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Cart' }).click()
+  await page.getByRole('link', { name: 'Cart', exact: true }).click()
   const line = page.getByRole('listitem').filter({ hasText: 'Cashew Butter' })
   await expect(line).toContainText('you confirmed this')
 })
@@ -46,7 +46,10 @@ test('M3: product without allergen data is "unable to verify"', async ({ page })
 
 test('M3: hide unsafe leaves only products with no match', async ({ page }) => {
   await signInAs(page, 'parent1')
-  await page.getByLabel(/Hide products that match/).check()
+  // The filter lives in the URL; the router applies it in a transition, so assert after it settles.
+  const hide = page.getByLabel(/Hide products that match/)
+  await hide.click()
+  await expect(hide).toBeChecked()
   await expect(page.getByText('Plain Rice Cakes')).toBeVisible()
   await expect(page.getByText('Cashew Butter')).toHaveCount(0)
   await expect(page.getByText('Trail Mix Surprise')).toHaveCount(0)

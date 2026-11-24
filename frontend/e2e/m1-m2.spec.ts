@@ -35,16 +35,18 @@ test('M2: an avoid-list change is visible on the next read', async ({ page }) =>
   await page.getByRole('form', { name: `Avoid list for ${label}` }).getByRole('button', { name: 'Save avoid list' }).click()
 
   await page.reload()
-  await expect(page.getByText(`Avoiding: Sesame.`)).toBeVisible()
+  // parent1 is shared by every run, so look inside this test's own profile.
+  await expect(page.getByRole('listitem').filter({ hasText: label }).getByText('Avoiding: Sesame.')).toBeVisible()
 })
 
 test('M1: admin1 creates a product and a new allergen version', async ({ page }) => {
   await signInAs(page, 'admin1')
   await page.getByRole('link', { name: 'Catalog admin' }).click()
   await page.getByRole('link', { name: 'Add a product' }).click()
+  await expect(page.getByRole('heading', { name: 'Add a product' })).toBeVisible()
 
   const sku = `E2E-${Date.now()}`
-  await page.getByLabel('SKU').fill(sku)
+  await page.locator('#sku').fill(sku)
   await page.getByLabel('Name').fill(`Pistachio Cookies ${sku}`)
   await page.getByLabel('Price (USD)').fill('3.99')
   await page.getByLabel('Pistachio').selectOption('CONTAINS')
