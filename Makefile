@@ -7,6 +7,14 @@ OTEL_AGENT := .tools/opentelemetry-javaagent.jar
 OTEL_AGENT_URL := https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
 INFRA_SERVICES := postgres redis keycloak otel-lgtm toxiproxy
 
+# In GitHub Codespaces the browser reaches forwarded ports at
+# https://<codespace>-<port>.<forwarding domain>; login redirects must use those URLs.
+ifeq ($(CODESPACES),true)
+  CS_URL = https://$(CODESPACE_NAME)-$(1).$(GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN)
+  export APP_PUBLIC_BASE_URL := $(call CS_URL,5173)
+  export OIDC_BROWSER_BASE := $(call CS_URL,8180)
+endif
+
 .DEFAULT_GOAL := help
 .PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image up-app check-local
 
@@ -44,6 +52,11 @@ frontend: ## Run the Vite dev server (proxies /api to :8080)
 	cd frontend && npm install --no-audit --no-fund && npm run dev
 
 seed: ## Load local seed data (local only, never in prod)
+	@if [ "$$($(COMPOSE) exec -T postgres psql -U ecommerce -d ecommerce -tAc "SELECT to_regclass('public.product') IS NOT NULL")" != "t" ]; then \
+	  echo "seed: database tables don't exist yet. Start the backend first ('make app'), wait for"; \
+	  echo "      'Started EcommerceApplication' (Flyway creates the tables on startup), then run 'make seed' again."; \
+	  exit 1; \
+	fi
 	@for f in local/seed/*.sql; do \
 	  echo "seed: $$f"; \
 	  $(COMPOSE) exec -T postgres psql -U ecommerce -d ecommerce -v ON_ERROR_STOP=1 -q < $$f || exit 1; \

@@ -1,8 +1,12 @@
-import type { ReactNode } from 'react'
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useSearchParams } from 'react-router'
+import { hasRole, useMe } from '../api/session'
+import { AccountMenu } from './AccountMenu'
 import { BackendStatus } from './BackendStatus'
 
-export function Layout({ account }: { account?: ReactNode }) {
+export function Layout() {
+  const me = useMe()
+  const [params] = useSearchParams()
+
   return (
     <div className="shell">
       <header className="site-header">
@@ -11,10 +15,17 @@ export function Layout({ account }: { account?: ReactNode }) {
           <NavLink to="/" end>
             Shop
           </NavLink>
-          <NavLink to="/admin/products">Catalog admin</NavLink>
+          {hasRole(me.data, 'SHOPPER') && <NavLink to="/profiles">My children</NavLink>}
+          {hasRole(me.data, 'CATALOG_ADMIN') && <NavLink to="/admin/products">Catalog admin</NavLink>}
         </nav>
-        {account}
+        <AccountMenu />
       </header>
+      {params.get('login') === 'failed' && (
+        <p className="problem" role="alert">
+          <span aria-hidden="true">⚠ </span>
+          Sign-in did not complete. Please try again.
+        </p>
+      )}
       <main>
         <Outlet />
       </main>
