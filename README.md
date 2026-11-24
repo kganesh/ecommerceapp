@@ -30,7 +30,24 @@ local/      Local stand-ins: Keycloak realm, Toxiproxy config, seed SQL
 infra/      Terraform for AWS (M5)
 ```
 
-## Prerequisites
+## Run it in GitHub Codespaces (no local installs)
+
+On GitHub: **Code → Codespaces → Create codespace on `<branch>`**. The dev
+container (`.devcontainer/`) brings Java 25, Maven, Node 22 and Docker, warms
+the dependency caches, and runs `make up` on every start. Then:
+
+```bash
+make app          # backend + frontend; the Ports tab opens the frontend (5173)
+make check-local  # in a second terminal
+make e2e
+```
+
+Ports are forwarded at `https://<codespace>-<port>.app.github.dev`: 5173
+frontend, 8080 backend, 3000 Grafana, 8180 Keycloak, 8474 Toxiproxy. The
+codespace needs a 4-core machine; **stop it when you're done** so it doesn't use
+up your monthly allowance (it also auto-stops after 30 minutes idle by default).
+
+## Prerequisites (running on your own machine)
 
 - Docker with Compose v2
 - JDK 25 (Eclipse Temurin) and Maven 3.9+
