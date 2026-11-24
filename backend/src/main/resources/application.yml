@@ -10,9 +10,49 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
+  session:
+    redis:
+      namespace: ecommerceapp:session
+  security:
+    oauth2:
+      client:
+        # Backend-for-frontend login (D11). Endpoints are configured explicitly (no
+        # discovery at startup): the browser reaches the identity provider at
+        # OIDC_BROWSER_BASE, while the backend calls it at OIDC_INTERNAL_BASE.
+        # Defaults target the local Keycloak in compose.yaml; AWS sets them for Cognito (M5).
+        registration:
+          idp:
+            provider: idp
+            client-id: ${OIDC_CLIENT_ID:ecommerce-bff}
+            client-secret: ${OIDC_CLIENT_SECRET:local-dev-bff-secret}
+            authorization-grant-type: authorization_code
+            scope: openid,profile,email
+            redirect-uri: ${app.public-base-url}/login/oauth2/code/{registrationId}
+        provider:
+          idp:
+            authorization-uri: ${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/auth
+            token-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/token
+            jwk-set-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/certs
+            user-info-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/userinfo
+            user-name-attribute: preferred_username
+
+app:
+  # Origin the browser uses for the SPA (Vite locally, CloudFront on AWS).
+  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:5173}
+  oidc:
+    end-session-uri: ${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/logout
+    # ID-token claim holding the user's roles (Keycloak mapper: "roles"; Cognito: "cognito:groups").
+    roles-claim: ${OIDC_ROLES_CLAIM:roles}
 
 server:
   shutdown: graceful
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 management:
   endpoints:

@@ -40,6 +40,9 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin   # local-only credential
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin   # local-only credential
       KC_HEALTH_ENABLED: "true"
+      # Honour X-Forwarded-* so login pages work behind the Codespaces port forwarder.
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "false"
     ports:
       - "8180:8080"
     volumes:

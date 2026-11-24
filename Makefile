@@ -7,6 +7,14 @@ OTEL_AGENT := .tools/opentelemetry-javaagent.jar
 OTEL_AGENT_URL := https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
 INFRA_SERVICES := postgres redis keycloak otel-lgtm toxiproxy
 
+# In GitHub Codespaces the browser reaches forwarded ports at
+# https://<codespace>-<port>.<forwarding domain>; login redirects must use those URLs.
+ifeq ($(CODESPACES),true)
+  CS_URL = https://$(CODESPACE_NAME)-$(1).$(GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN)
+  export APP_PUBLIC_BASE_URL := $(call CS_URL,5173)
+  export OIDC_BROWSER_BASE := $(call CS_URL,8180)
+endif
+
 .DEFAULT_GOAL := help
 .PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image up-app check-local
 
