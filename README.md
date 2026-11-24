@@ -98,6 +98,12 @@ curl -s -X POST localhost:8474/proxies/redis/toxics \
   -d '{"name":"down","type":"timeout","attributes":{"timeout":0}}'
 ```
 
+## Share a running codespace
+
+`make share` makes the app (5173) and sign-in (8180) ports public and prints the link to send.
+Use `make share SHARE_PORT=8081` for the prod-like stack. Anyone with the link can use the test
+accounts, and the Keycloak admin page becomes public too, so change its `admin/admin` password first.
+
 ## Prod-like stack and AWS (M5)
 
 `make up-prod` builds the production images and runs them behind an nginx web tier that routes
