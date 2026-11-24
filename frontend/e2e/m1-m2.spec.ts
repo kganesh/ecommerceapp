@@ -43,9 +43,10 @@ test('M1: admin1 creates a product and a new allergen version', async ({ page })
   await signInAs(page, 'admin1')
   await page.getByRole('link', { name: 'Catalog admin' }).click()
   await page.getByRole('link', { name: 'Add a product' }).click()
+  await expect(page.getByRole('heading', { name: 'Add a product' })).toBeVisible()
 
   const sku = `E2E-${Date.now()}`
-  await page.getByLabel('SKU').fill(sku)
+  await page.getByLabel('SKU', { exact: true }).fill(sku)
   await page.getByLabel('Name').fill(`Pistachio Cookies ${sku}`)
   await page.getByLabel('Price (USD)').fill('3.99')
   await page.getByLabel('Pistachio').selectOption('CONTAINS')

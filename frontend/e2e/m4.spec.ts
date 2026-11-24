@@ -6,6 +6,7 @@ import { signInAs } from './login.ts'
 
 async function emptyCart(page: Page) {
   await page.goto('/cart')
+  await page.waitForLoadState('networkidle') // count Remove buttons only once the cart has loaded
   const remove = page.getByRole('button', { name: 'Remove' })
   while ((await remove.count()) > 0) {
     await remove.first().click()
