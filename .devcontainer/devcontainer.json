@@ -10,19 +10,44 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
     },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.13"
+    },
+    "ghcr.io/devcontainers/features/aws-cli:1": {}
   },
   "hostRequirements": {
     "cpus": 4,
     "memory": "8gb"
   },
-  "forwardPorts": [5173, 8080, 3000, 8180, 8474],
+  "forwardPorts": [
+    5173,
+    8080,
+    3000,
+    8180,
+    8474,
+    8081
+  ],
   "portsAttributes": {
-    "5173": { "label": "Frontend (Vite)", "onAutoForward": "openBrowser" },
-    "8080": { "label": "Backend API" },
-    "3000": { "label": "Grafana" },
-    "8180": { "label": "Keycloak" },
-    "8474": { "label": "Toxiproxy admin" }
+    "5173": {
+      "label": "Frontend (Vite)",
+      "onAutoForward": "openBrowser"
+    },
+    "8080": {
+      "label": "Backend API"
+    },
+    "3000": {
+      "label": "Grafana"
+    },
+    "8180": {
+      "label": "Keycloak"
+    },
+    "8474": {
+      "label": "Toxiproxy admin"
+    },
+    "8081": {
+      "label": "Prod-like web (make up-prod)"
+    }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "postStartCommand": "make up",
@@ -37,7 +62,9 @@
       ]
     },
     "codespaces": {
-      "openFiles": ["README.md"]
+      "openFiles": [
+        "README.md"
+      ]
     }
   }
 }

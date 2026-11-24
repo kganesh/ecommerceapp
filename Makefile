@@ -16,7 +16,7 @@ ifeq ($(CODESPACES),true)
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image image-web up-app up-prod e2e-prod load-test check-local
+.PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image image-web up-app up-prod e2e-prod load-test aws-deploy check-local
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -97,6 +97,9 @@ e2e-prod: ## Playwright suite (incl. accessibility scan) against the prod-like s
 load-test: ## M5: k6 at 10 req/s against the prod-like stack (needs Docker)
 	docker run --rm -i --network host -e BASE_URL=http://localhost:8081 -v "$(CURDIR)/load:/load:ro" \
 	  grafana/k6:latest run /load/shop.js
+
+aws-deploy: ## M5: first deploy to AWS (Terraform + image + SPA); see infra/README.md
+	./infra/deploy.sh
 
 check-local: ## M0 gate: verify the local stack answers
 	@curl -fsS http://localhost:8080/actuator/health | grep -q '"UP"' && echo "backend health: UP"
