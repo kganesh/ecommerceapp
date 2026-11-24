@@ -34,7 +34,7 @@ test('M4: purchase with a confirmed warning; the order records what was confirme
   await expect(page.getByText('You confirmed this when adding to cart')).toBeVisible()
   await expect(page.getByText('Child 1: contains Almond')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Orders' }).click()
+  await page.getByRole('link', { name: 'Orders', exact: true }).click()
   await expect(page.getByRole('cell', { name: '1 confirmed' }).first()).toBeVisible()
 })
 
