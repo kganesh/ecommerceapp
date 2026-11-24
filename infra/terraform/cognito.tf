@@ -81,7 +81,7 @@ data "archive_file" "add_to_shopper" {
 
   source {
     filename = "index.py"
-    content = <<-PY
+    content  = <<-PY
       import boto3
 
       cognito = boto3.client("cognito-idp")

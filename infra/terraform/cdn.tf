@@ -48,7 +48,7 @@ resource "aws_cloudfront_function" "spa_routes" {
   name    = "${local.name}-spa-routes"
   runtime = "cloudfront-js-2.0"
   publish = true
-  code = <<-JS
+  code    = <<-JS
     function handler(event) {
       var request = event.request;
       if (request.uri.indexOf('.') === -1) {
