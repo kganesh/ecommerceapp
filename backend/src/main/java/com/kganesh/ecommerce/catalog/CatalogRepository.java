@@ -38,8 +38,8 @@ class CatalogRepository {
         this.jdbc = jdbc;
     }
 
-    List<ProductRow> findPage(String query, boolean activeOnly, int limit, long offset) {
-        Filter filter = Filter.of(query, activeOnly);
+    List<ProductRow> findPage(String query, boolean activeOnly, UUID hideUnsafeFor, int limit, long offset) {
+        Filter filter = Filter.of(query, activeOnly, hideUnsafeFor);
         return jdbc.sql("SELECT " + PRODUCT_COLUMNS + " FROM product" + filter.where()
                         + " ORDER BY lower(name), id LIMIT :limit OFFSET :offset")
                 .params(filter.params())
@@ -49,12 +49,19 @@ class CatalogRepository {
                 .list();
     }
 
-    long count(String query, boolean activeOnly) {
-        Filter filter = Filter.of(query, activeOnly);
+    long count(String query, boolean activeOnly, UUID hideUnsafeFor) {
+        Filter filter = Filter.of(query, activeOnly, hideUnsafeFor);
         return jdbc.sql("SELECT count(*) FROM product" + filter.where())
                 .params(filter.params())
                 .query(Long.class)
                 .single();
+    }
+
+    List<ProductRow> findByIds(Collection<UUID> ids) {
+        return jdbc.sql("SELECT " + PRODUCT_COLUMNS + " FROM product WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query(CatalogRepository::mapProduct)
+                .list();
     }
 
     Optional<ProductRow> findById(UUID id) {
@@ -219,11 +226,27 @@ class CatalogRepository {
 
     /** Builds the WHERE clause without untyped NULL parameters, which Postgres cannot infer. */
     private record Filter(String where, Map<String, Object> params) {
-        static Filter of(String query, boolean activeOnly) {
+        static Filter of(String query, boolean activeOnly, UUID hideUnsafeFor) {
             List<String> clauses = new ArrayList<>();
             Map<String, Object> params = new LinkedHashMap<>();
             if (activeOnly) {
                 clauses.add("active");
+            }
+            if (hideUnsafeFor != null) {
+                // Same matching rule as the allergen check: either allergen covers the other.
+                // Products without allergen data are hidden too (unable to verify).
+                clauses.add("""
+                        current_allergen_version IS NOT NULL AND NOT EXISTS (
+                            SELECT 1
+                            FROM product_allergen pa
+                            JOIN child_profile cp ON cp.user_id = :hideUnsafeFor AND cp.deleted_at IS NULL
+                            JOIN avoid_list_entry ale ON ale.profile_id = cp.id
+                            JOIN allergen_closure c
+                              ON (c.ancestor_id = ale.allergen_id AND c.descendant_id = pa.allergen_id)
+                              OR (c.ancestor_id = pa.allergen_id AND c.descendant_id = ale.allergen_id)
+                            WHERE pa.product_id = product.id AND pa.version = product.current_allergen_version)
+                        """);
+                params.put("hideUnsafeFor", hideUnsafeFor);
             }
             if (query != null && !query.isBlank()) {
                 clauses.add("(lower(name) LIKE :pattern OR lower(sku) LIKE :pattern)");

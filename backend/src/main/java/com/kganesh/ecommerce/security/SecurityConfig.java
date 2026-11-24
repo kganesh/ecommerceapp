@@ -61,6 +61,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole(Roles.CATALOG_ADMIN)
                         .requestMatchers("/api/v1/profiles", "/api/v1/profiles/**").hasRole(Roles.SHOPPER)
+                        .requestMatchers("/api/v1/carts/**").hasRole(Roles.SHOPPER)
                         .anyRequest().authenticated())
                 .oauth2Login(login -> login
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequests))
