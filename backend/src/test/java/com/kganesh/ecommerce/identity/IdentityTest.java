@@ -15,6 +15,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -97,7 +98,12 @@ class IdentityTest extends IntegrationTest {
         assertThat(cookies).anySatisfy(c -> assertThat(c).startsWith("SESSION=").containsIgnoringCase("HttpOnly")
                 .containsIgnoringCase("SameSite=Lax"));
         assertThat(cookies).allSatisfy(c -> assertThat(c).matches("^(SESSION|XSRF-TOKEN)=.*"));
-        assertThat(redis.keys("ecommerceapp:session*")).isNotEmpty();
+
+        // The cookie carries only the (Base64-encoded) session id; the session itself is in Redis.
+        String cookieValue = cookies.stream().filter(c -> c.startsWith("SESSION=")).findFirst().orElseThrow()
+                .substring("SESSION=".length()).split(";", 2)[0];
+        String sessionId = new String(Base64.getDecoder().decode(cookieValue), StandardCharsets.UTF_8);
+        assertThat(redis.keys("*" + sessionId + "*")).isNotEmpty();
     }
 
     @Test

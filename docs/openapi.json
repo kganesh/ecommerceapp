@@ -15,8 +15,14 @@
     "description" : "Catalog administration; CATALOG_ADMIN only",
     "name" : "admin-products"
   }, {
+    "description" : "Who is signed in",
+    "name" : "session"
+  }, {
     "description" : "Browse and search the catalog",
     "name" : "products"
+  }, {
+    "description" : "Child profiles and their avoid lists",
+    "name" : "profiles"
   }, {
     "description" : "Build and runtime information",
     "name" : "meta"
@@ -249,6 +255,25 @@
         "tags" : [ "allergens" ]
       }
     },
+    "/api/v1/me" : {
+      "get" : {
+        "operationId" : "getMe",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Me"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "The signed-in user, or authenticated=false",
+        "tags" : [ "session" ]
+      }
+    },
     "/api/v1/meta" : {
       "get" : {
         "operationId" : "getMeta",
@@ -340,6 +365,150 @@
         "summary" : "An active product with its current allergens",
         "tags" : [ "products" ]
       }
+    },
+    "/api/v1/profiles" : {
+      "get" : {
+        "operationId" : "listProfiles",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Profile"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "The signed-in parent's child profiles",
+        "tags" : [ "profiles" ]
+      },
+      "post" : {
+        "operationId" : "createProfile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileLabelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "summary" : "Add a child profile (at most 10 per account)",
+        "tags" : [ "profiles" ]
+      }
+    },
+    "/api/v1/profiles/{id}" : {
+      "delete" : {
+        "operationId" : "deleteProfile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "summary" : "Delete a child profile",
+        "tags" : [ "profiles" ]
+      },
+      "patch" : {
+        "operationId" : "renameProfile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileLabelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Rename a child profile",
+        "tags" : [ "profiles" ]
+      }
+    },
+    "/api/v1/profiles/{id}/avoid-list" : {
+      "put" : {
+        "operationId" : "setAvoidList",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AvoidListRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Replace a profile's avoid list",
+        "tags" : [ "profiles" ]
+      }
     }
   },
   "components" : {
@@ -428,6 +597,21 @@
         },
         "required" : [ "action", "actor", "at" ]
       },
+      "AvoidListRequest" : {
+        "type" : "object",
+        "description" : "Replace a profile's avoid list",
+        "properties" : {
+          "allergenIds" : {
+            "type" : "array",
+            "example" : [ "TREE_NUT", "PEANUT" ],
+            "items" : {
+              "type" : "string",
+              "minLength" : 1
+            }
+          }
+        },
+        "required" : [ "allergenIds" ]
+      },
       "CreateProductRequest" : {
         "type" : "object",
         "description" : "Create a product. Omit allergens if the label data is not yet known.",
@@ -465,6 +649,34 @@
           }
         },
         "required" : [ "name", "priceCents", "sku" ]
+      },
+      "Me" : {
+        "type" : "object",
+        "description" : "The current browser session. Tokens are never exposed; only identity and roles.",
+        "properties" : {
+          "authenticated" : {
+            "type" : "boolean"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "loginUrl" : {
+            "type" : "string",
+            "description" : "Navigate the browser here to sign in"
+          },
+          "roles" : {
+            "type" : "array",
+            "description" : "Application roles: SHOPPER, CATALOG_ADMIN",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "username" : {
+            "type" : "string",
+            "description" : "Present when signed in"
+          }
+        },
+        "required" : [ "authenticated", "loginUrl", "roles" ]
       },
       "Product" : {
         "type" : "object",
@@ -556,6 +768,53 @@
           }
         },
         "required" : [ "items", "page", "size", "total" ]
+      },
+      "Profile" : {
+        "type" : "object",
+        "description" : "A child profile. Holds a label only: no name or date of birth.",
+        "properties" : {
+          "avoidList" : {
+            "type" : "array",
+            "description" : "Allergen ids the parent selected",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "avoidListVersion" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Increments on every avoid-list change"
+          },
+          "coveredAllergenIds" : {
+            "type" : "array",
+            "description" : "Everything the avoid list covers, including taxonomy descendants (TREE_NUT covers TREE_NUT.CASHEW)",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "label" : {
+            "type" : "string",
+            "example" : "Child 1"
+          }
+        },
+        "required" : [ "avoidList", "avoidListVersion", "coveredAllergenIds", "id", "label" ]
+      },
+      "ProfileLabelRequest" : {
+        "type" : "object",
+        "description" : "Create or rename a profile",
+        "properties" : {
+          "label" : {
+            "type" : "string",
+            "example" : "Child 1",
+            "maxLength" : 40,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "label" ]
       },
       "SetAllergensRequest" : {
         "type" : "object",

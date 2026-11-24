@@ -91,6 +91,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in user, or authenticated=false */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meta": {
         parameters: {
             query?: never;
@@ -142,6 +159,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in parent's child profiles */
+        get: operations["listProfiles"];
+        put?: never;
+        /** Add a child profile (at most 10 per account) */
+        post: operations["createProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a child profile */
+        delete: operations["deleteProfile"];
+        options?: never;
+        head?: never;
+        /** Rename a child profile */
+        patch: operations["renameProfile"];
+        trace?: never;
+    };
+    "/api/v1/profiles/{id}/avoid-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a profile's avoid list */
+        put: operations["setAvoidList"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -186,6 +256,16 @@ export interface components {
             /** Format: int32 */
             toVersion?: number;
         };
+        /** @description Replace a profile's avoid list */
+        AvoidListRequest: {
+            /**
+             * @example [
+             *       "TREE_NUT",
+             *       "PEANUT"
+             *     ]
+             */
+            allergenIds: string[];
+        };
         /** @description Create a product. Omit allergens if the label data is not yet known. */
         CreateProductRequest: {
             /** @description Allergens for version 1. Omit for 'no allergen data yet'; send [] for 'verified: none'. */
@@ -200,6 +280,17 @@ export interface components {
             /** Format: int64 */
             priceCents: number;
             sku: string;
+        };
+        /** @description The current browser session. Tokens are never exposed; only identity and roles. */
+        Me: {
+            authenticated: boolean;
+            email?: string;
+            /** @description Navigate the browser here to sign in */
+            loginUrl: string;
+            /** @description Application roles: SHOPPER, CATALOG_ADMIN */
+            roles: string[];
+            /** @description Present when signed in */
+            username?: string;
         };
         /** @description A catalog product with the allergens of its current allergen version */
         Product: {
@@ -243,6 +334,27 @@ export interface components {
             size: number;
             /** Format: int64 */
             total: number;
+        };
+        /** @description A child profile. Holds a label only: no name or date of birth. */
+        Profile: {
+            /** @description Allergen ids the parent selected */
+            avoidList: string[];
+            /**
+             * Format: int32
+             * @description Increments on every avoid-list change
+             */
+            avoidListVersion: number;
+            /** @description Everything the avoid list covers, including taxonomy descendants (TREE_NUT covers TREE_NUT.CASHEW) */
+            coveredAllergenIds: string[];
+            /** Format: uuid */
+            id: string;
+            /** @example Child 1 */
+            label: string;
+        };
+        /** @description Create or rename a profile */
+        ProfileLabelRequest: {
+            /** @example Child 1 */
+            label: string;
         };
         /** @description Replace a product's allergens. Always creates a new immutable allergen version. */
         SetAllergensRequest: {
@@ -430,6 +542,26 @@ export interface operations {
             };
         };
     };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
     getMeta: {
         parameters: {
             query?: never;
@@ -492,6 +624,122 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Product"];
+                };
+            };
+        };
+    };
+    listProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"][];
+                };
+            };
+        };
+    };
+    createProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileLabelRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+        };
+    };
+    deleteProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    renameProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileLabelRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+        };
+    };
+    setAvoidList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvoidListRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
                 };
             };
         };

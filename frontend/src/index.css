@@ -146,3 +146,46 @@ fieldset {
   border: 1px solid currentColor;
   border-radius: 8px;
 }
+
+.account {
+  margin-left: auto;
+}
+
+form.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.profile-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-card {
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.profile-card h3 {
+  margin: 0 0 0.25rem;
+}
+
+.avoid-list-picker {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  columns: 2 14rem;
+}
+
+.avoid-list-picker li {
+  break-inside: avoid;
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
