@@ -51,7 +51,7 @@ services:
   otel-lgtm:
     # Stand-in for the OTel Collector + Amazon Managed Prometheus / Grafana.
     # Grafana: http://localhost:3000 (admin/admin). OTLP: 4317 (gRPC), 4318 (HTTP).
-    image: grafana/otel-lgtm:0.29.2
+    image: grafana/otel-lgtm:0.41.1
     ports:
       - "3000:3000"
       - "4317:4317"
