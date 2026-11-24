@@ -13,6 +13,8 @@ const P95_MS = Number(__ENV.P95_MS || 500)
 const STIR_FRY = '00000000-0000-4000-8000-000000000003' // contains peanut: parent1's Child 2 avoids it
 
 export const options = {
+  // Keep each VU's session cookie between iterations (k6 clears cookies per iteration by default).
+  noCookiesReset: true,
   scenarios: {
     shop: {
       executor: 'constant-arrival-rate',
