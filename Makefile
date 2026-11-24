@@ -6,6 +6,7 @@ COMPOSE := docker compose
 OTEL_AGENT := .tools/opentelemetry-javaagent.jar
 OTEL_AGENT_URL := https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
 INFRA_SERVICES := postgres redis keycloak otel-lgtm toxiproxy
+SHARE_PORT ?= 5173
 
 # In GitHub Codespaces the browser reaches forwarded ports at
 # https://<codespace>-<port>.<forwarding domain>; login redirects must use those URLs.
@@ -16,7 +17,7 @@ ifeq ($(CODESPACES),true)
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image image-web up-app up-prod e2e-prod load-test aws-deploy check-local
+.PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image image-web up-app up-prod e2e-prod load-test aws-deploy share check-local
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -88,8 +89,8 @@ up-app: image ## Run the backend image inside Compose
 	$(COMPOSE) --profile app up -d --wait
 
 up-prod: image image-web ## M5: production images behind a prod-like web tier on http://localhost:8081
-	$(COMPOSE) --profile prod up -d --wait
-	@echo "App: http://localhost:8081  (then 'make seed' once the backend has started)"
+	$(if $(filter true,$(CODESPACES)),APP_PUBLIC_BASE_URL=$(call CS_URL,8081)) $(COMPOSE) --profile prod up -d --wait
+	@echo "App: $(if $(filter true,$(CODESPACES)),$(call CS_URL,8081),http://localhost:8081)  (then 'make seed' once the backend has started)"
 
 e2e-prod: ## Playwright suite (incl. accessibility scan) against the prod-like stack
 	cd frontend && npx playwright install --with-deps chromium && E2E_BASE_URL=http://localhost:8081 npm run e2e
@@ -97,6 +98,20 @@ e2e-prod: ## Playwright suite (incl. accessibility scan) against the prod-like s
 load-test: ## M5: k6 at 10 req/s against the prod-like stack (needs Docker)
 	docker run --rm -i --network host -e BASE_URL=http://localhost:8081 -v "$(CURDIR)/load:/load:ro" \
 	  grafana/k6:latest run /load/shop.js
+
+share: ## Codespaces: make the app and sign-in ports public and print the link (SHARE_PORT=8081 for up-prod)
+	@if [ "$(CODESPACES)" != "true" ]; then echo "share: only works inside GitHub Codespaces"; exit 1; fi
+	@gh codespace ports visibility $(SHARE_PORT):public 8180:public -c "$(CODESPACE_NAME)" || { \
+	  echo ""; \
+	  echo "share: could not change port visibility. Either use the Ports tab (right-click a port >"; \
+	  echo "       Port Visibility > Public) for ports $(SHARE_PORT) and 8180, or sign the GitHub CLI in"; \
+	  echo "       with your own account first: unset GITHUB_TOKEN && gh auth login"; \
+	  exit 1; }
+	@echo ""
+	@echo "Shared. Send this link:  $(call CS_URL,$(SHARE_PORT))"
+	@echo "Test sign-ins: parent1/parent1 (shopper), admin1/admin1 (catalog admin)."
+	@echo "Note: the Keycloak admin page on port 8180 is public too; change its admin/admin password."
+	@echo "Ports may turn private again after the codespace restarts; run 'make share' again."
 
 aws-deploy: ## M5: first deploy to AWS (Terraform + image + SPA); see infra/README.md
 	./infra/deploy.sh
