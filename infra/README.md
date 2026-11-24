@@ -24,7 +24,13 @@ Browser ──HTTPS──> CloudFront ──> S3 (SPA)
 
 ## First deploy
 
-Needs Terraform 1.9+, the AWS CLI signed in to the target account, and Docker.
+**Quickest: from Codespaces, `make aws-deploy`** (`infra/deploy.sh`). It checks your AWS
+access, writes `terraform.tfvars`, creates ECR, builds and pushes the backend image, applies
+the rest, publishes the SPA and prints the URL and the GitHub variables. Terraform asks
+before each change. Set `ALARM_EMAIL=you@example.com` first to get alarm emails.
+
+The manual steps it automates follow. They need Terraform 1.9+, the AWS CLI signed in to the
+target account, and Docker.
 
 1. `cd infra/terraform && cp terraform.tfvars.example terraform.tfvars`, then set `cognito_domain_prefix` (globally unique) and `alarm_email`.
 2. Create the image repository first, push a first image, then create the rest:
@@ -42,6 +48,12 @@ Needs Terraform 1.9+, the AWS CLI signed in to the target account, and Docker.
 5. Confirm the alarm subscription email.
 
 Seed data in `local/seed` is never loaded on AWS; add products through the admin screens.
+
+## Tearing it down
+
+`terraform destroy` stops at two guards on purpose: RDS and the Cognito user pool have deletion
+protection. Turn them off first (`deletion_protection = false` on `aws_db_instance.main`, `"INACTIVE"`
+on `aws_cognito_user_pool.main`, then `terraform apply`). The database still leaves a final snapshot.
 
 ## Cost notes
 
