@@ -1,6 +1,8 @@
 package com.kganesh.ecommerce.security;
 
 import com.kganesh.ecommerce.config.AppProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.web.SecurityFilterChain;
@@ -31,6 +34,8 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
  */
 @Configuration(proxyBeanMethods = false)
 class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     static final String LOGIN_PATH = "/oauth2/authorization/idp";
 
@@ -69,7 +74,14 @@ class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userAuthoritiesMapper(new RolesClaimAuthoritiesMapper(app.oidc().rolesClaim())))
                         .defaultSuccessUrl(home, true)
-                        .failureUrl(home + "?login=failed"))
+                        .failureHandler((request, response, exception) -> {
+                            // Say why in the log; the browser only learns that sign-in failed.
+                            log.warn("OIDC sign-in failed: {}", exception.getMessage());
+                            response.sendRedirect(home + "?login=failed");
+                        }))
+                // Rebuild login URLs from app.public-base-url so the callback matches the
+                // redirect_uri behind proxies (Vite, Codespaces, CloudFront).
+                .addFilterBefore(new PublicBaseUrlFilter(app.publicBaseUrl()), OAuth2AuthorizationRequestRedirectFilter.class)
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessHandler(new OidcLogoutHandler(app.oidc().endSessionUri(), home)))
