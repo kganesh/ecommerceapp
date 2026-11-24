@@ -60,7 +60,7 @@ services:
   toxiproxy:
     # Fault injection between the API and Postgres/Redis (fail-safe tests, M3).
     # The `chaos` Spring profile routes the app through these proxies.
-    image: ghcr.io/shopify/toxiproxy:2.12.0
+    image: ghcr.io/shopify/toxiproxy:2.13.0
     command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
     ports:
       - "8474:8474"     # admin API
