@@ -72,8 +72,78 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate compose.yaml
-        run: docker compose --profile app config --quiet
+        run: docker compose --profile app --profile prod config --quiet
       - name: Validate Keycloak realm and Toxiproxy JSON
         run: |
           python3 -m json.tool local/keycloak/ecommerce-realm.json > /dev/null
           python3 -m json.tool local/toxiproxy/toxiproxy.json > /dev/null
+
+  terraform:
+    name: Terraform (fmt, validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -diff -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
+  prod-like:
+    # M5 local gate in CI: production images behind the prod-like web tier, then the
+    # Playwright suite (including the accessibility scan) and the k6 load test.
+    name: Prod-like stack (e2e, accessibility, load)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build production images
+        run: make image image-web
+      - name: Start the prod-like stack
+        run: docker compose --profile prod up -d postgres redis keycloak backend web
+      - name: Wait for backend and identity provider
+        run: |
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:8081/actuator/health | grep -q '"UP"' \
+               && curl -fsS -o /dev/null http://localhost:8180/realms/ecommerce/.well-known/openid-configuration; then
+              echo "stack is up"; exit 0
+            fi
+            sleep 4
+          done
+          docker compose --profile prod logs --tail=200 backend keycloak
+          exit 1
+      - name: Load seed data
+        run: make seed
+      - name: Install Playwright
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: End-to-end and accessibility
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: http://localhost:8081
+        run: npx playwright test
+      - uses: grafana/setup-k6-action@v1
+      - name: Load test (10 req/s)
+        run: k6 run -e BASE_URL=http://localhost:8081 -e DURATION=1m load/shop.js
+      - name: Backend logs
+        if: failure()
+        run: docker compose --profile prod logs --tail=300 backend web
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          if-no-files-found: ignore

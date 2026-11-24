@@ -16,7 +16,7 @@ ifeq ($(CODESPACES),true)
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image up-app check-local
+.PHONY: help up down reset app backend frontend seed test test-backend test-frontend e2e openapi image image-web up-app up-prod e2e-prod load-test check-local
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -27,10 +27,10 @@ up: ## Start Postgres, Redis, Keycloak, OTel stack and Toxiproxy
 	@echo "Keycloak: http://localhost:8180 (admin/admin; realm 'ecommerce')"
 
 down: ## Stop the local stack (keeps data)
-	$(COMPOSE) --profile app down
+	$(COMPOSE) --profile app --profile prod down
 
 reset: ## Stop the stack and delete all local data
-	$(COMPOSE) --profile app down -v
+	$(COMPOSE) --profile app --profile prod down -v
 
 app: ## Run backend (local profile) and frontend dev server together
 	$(MAKE) -j2 backend frontend
@@ -81,8 +81,22 @@ image: ## Build the backend container image (same image that goes to ECR)
 	cd backend && mvn -B spring-boot:build-image -DskipTests \
 	  -Dspring-boot.build-image.imageName=ecommerceapp-backend:local
 
+image-web: ## Build the SPA image (nginx) for the prod-like stack
+	docker build -t ecommerceapp-web:local frontend
+
 up-app: image ## Run the backend image inside Compose
 	$(COMPOSE) --profile app up -d --wait
+
+up-prod: image image-web ## M5: production images behind a prod-like web tier on http://localhost:8081
+	$(COMPOSE) --profile prod up -d --wait
+	@echo "App: http://localhost:8081  (then 'make seed' once the backend has started)"
+
+e2e-prod: ## Playwright suite (incl. accessibility scan) against the prod-like stack
+	cd frontend && npx playwright install --with-deps chromium && E2E_BASE_URL=http://localhost:8081 npm run e2e
+
+load-test: ## M5: k6 at 10 req/s against the prod-like stack (needs Docker)
+	docker run --rm -i --network host -e BASE_URL=http://localhost:8081 -v "$(CURDIR)/load:/load:ro" \
+	  grafana/k6:latest run /load/shop.js
 
 check-local: ## M0 gate: verify the local stack answers
 	@curl -fsS http://localhost:8080/actuator/health | grep -q '"UP"' && echo "backend health: UP"

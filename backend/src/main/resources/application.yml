@@ -35,19 +35,21 @@ spring:
             redirect-uri: ${app.public-base-url}/login/oauth2/code/{registrationId}
         provider:
           idp:
-            authorization-uri: ${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/auth
-            token-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/token
-            jwk-set-uri: ${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/certs
+            # Full URIs can be set directly (Cognito on AWS); the defaults build Keycloak's paths.
+            authorization-uri: ${OIDC_AUTHORIZATION_URI:${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/auth}
+            token-uri: ${OIDC_TOKEN_URI:${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/token}
+            jwk-set-uri: ${OIDC_JWK_SET_URI:${OIDC_INTERNAL_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/certs}
             # No user-info-uri on purpose: username, email and roles come from the signed ID
             # token. Calling UserInfo over the internal URL fails when the identity provider
             # issued the token under the browser URL (Codespaces, any proxy): 401.
-            user-name-attribute: preferred_username
+            # Keycloak: preferred_username. Cognito: email (its ID token has no preferred_username).
+            user-name-attribute: ${OIDC_USER_NAME_ATTRIBUTE:preferred_username}
 
 app:
   # Origin the browser uses for the SPA (Vite locally, CloudFront on AWS).
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:5173}
   oidc:
-    end-session-uri: ${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/logout
+    end-session-uri: ${OIDC_END_SESSION_URI:${OIDC_BROWSER_BASE:http://localhost:8180}/realms/ecommerce/protocol/openid-connect/logout}
     # ID-token claim holding the user's roles (Keycloak mapper: "roles"; Cognito: "cognito:groups").
     roles-claim: ${OIDC_ROLES_CLAIM:roles}
   payments:

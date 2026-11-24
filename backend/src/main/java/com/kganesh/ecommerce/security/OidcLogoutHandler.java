@@ -21,10 +21,12 @@ final class OidcLogoutHandler implements LogoutSuccessHandler {
 
     private final String endSessionUri;
     private final String postLogoutRedirectUri;
+    private final String clientId;
 
-    OidcLogoutHandler(String endSessionUri, String postLogoutRedirectUri) {
+    OidcLogoutHandler(String endSessionUri, String postLogoutRedirectUri, String clientId) {
         this.endSessionUri = endSessionUri;
         this.postLogoutRedirectUri = postLogoutRedirectUri;
+        this.clientId = clientId;
     }
 
     @Override
@@ -35,6 +37,9 @@ final class OidcLogoutHandler implements LogoutSuccessHandler {
             redirectUrl = UriComponentsBuilder.fromUriString(endSessionUri)
                     .queryParam("id_token_hint", user.getIdToken().getTokenValue())
                     .queryParam("post_logout_redirect_uri", postLogoutRedirectUri)
+                    // Cognito's /logout ignores the two standard parameters above and needs these.
+                    .queryParam("client_id", clientId)
+                    .queryParam("logout_uri", postLogoutRedirectUri)
                     .encode()
                     .toUriString();
         }

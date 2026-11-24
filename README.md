@@ -98,6 +98,17 @@ curl -s -X POST localhost:8474/proxies/redis/toxics \
   -d '{"name":"down","type":"timeout","attributes":{"timeout":0}}'
 ```
 
+## Prod-like stack and AWS (M5)
+
+`make up-prod` builds the production images and runs them behind an nginx web tier that routes
+like CloudFront, at http://localhost:8081 (sign in as parent1/parent1 or admin1/admin1). Then:
+
+- `make seed` once the backend is up
+- `make e2e-prod`: Playwright suite, including the accessibility scan (`e2e/a11y.spec.ts`)
+- `make load-test`: k6 at 10 requests/second (`load/shop.js`); fails if p95 > 500 ms (proposed NFR-3 target)
+
+CI runs all three on every pull request. To deploy to AWS, see [infra/README.md](infra/README.md).
+
 ## AI label reading (optional, M4.5)
 
 Admins can photograph a label in the product editor; Claude on Amazon Bedrock suggests
