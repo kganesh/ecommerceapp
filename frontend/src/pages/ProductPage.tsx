@@ -1,6 +1,8 @@
 import { Link, useParams } from 'react-router'
 import { useProduct } from '../api/catalog'
+import { AddToCart } from '../components/AddToCart'
 import { AllergenLabel } from '../components/AllergenLabel'
+import { SafetyNotice } from '../components/SafetyNotice'
 import { formatPrice } from '../lib/format'
 import { ErrorNotice } from '../components/ErrorNotice'
 
@@ -22,6 +24,8 @@ export function ProductPage() {
           {product.data.description && <p>{product.data.description}</p>}
           <h3>Allergens</h3>
           <AllergenLabel product={product.data} />
+          <SafetyNotice safety={product.data.safety} />
+          <AddToCart productId={product.data.id} />
           <p className="disclaimer">Always check the label on the package before serving.</p>
         </article>
       )}

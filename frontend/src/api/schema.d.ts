@@ -91,6 +91,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/carts/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The cart, with each line re-checked against current data */
+        get: operations["getCart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/carts/me/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a product; 409 with an allergen warning if any child's avoid list matches */
+        post: operations["addCartItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/carts/me/items/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a line */
+        delete: operations["removeCartItem"];
+        options?: never;
+        head?: never;
+        /** Change a line's quantity */
+        patch: operations["updateCartItem"];
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -132,7 +184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Search active products by name or SKU */
+        /** Search active products; shoppers get per-child allergen results and can hide matches */
         get: operations["searchProducts"];
         put?: never;
         post?: never;
@@ -216,6 +268,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Add a product. Resend with ackToken after the parent confirms a 409 allergen warning. */
+        AddItemRequest: {
+            /**
+             * Format: uuid
+             * @description From the 409 ALLERGEN_WARNING response, after the parent confirmed
+             */
+            ackToken?: string;
+            /** Format: uuid */
+            productId: string;
+            /**
+             * Format: int32
+             * @description Defaults to 1
+             */
+            qty?: number;
+        };
+        /** @description A child profile affected by a warning */
+        AffectedProfile: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
         /** @description A node in the allergen taxonomy. Matching is by id, never by name or synonym. */
         Allergen: {
             /** @example Cashew */
@@ -236,6 +309,30 @@ export interface components {
             allergenId: string;
             /** @enum {string} */
             matchType: "CONTAINS" | "MAY_CONTAIN";
+        };
+        /** @description 409 body from add-to-cart: nothing was added. Show every match (child, allergen, contains / may contain) and, if the parent confirms, resend the request with ackToken. */
+        AllergenWarning: {
+            /** Format: date-time */
+            ackExpiresAt: string;
+            /**
+             * Format: uuid
+             * @description Single use; void if the product's allergens or any avoid list changes
+             */
+            ackToken: string;
+            affectedProfiles: components["schemas"]["AffectedProfile"][];
+            /**
+             * Format: int32
+             * @description Allergen version the warning is based on; absent when the product has no allergen data
+             */
+            allergenVersion?: number;
+            /** @enum {string} */
+            code: "ALLERGEN_WARNING";
+            matches: components["schemas"]["SafetyMatch"][];
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            /** @description True when the product has no allergen data: unable to verify */
+            unverified: boolean;
         };
         /** @description Identifies the running backend build */
         AppMeta: {
@@ -266,6 +363,32 @@ export interface components {
              */
             allergenIds: string[];
         };
+        /** @description The signed-in parent's cart */
+        Cart: {
+            /** @example USD */
+            currency: string;
+            lines: components["schemas"]["CartLine"][];
+            /** @description True if any line needs acknowledging before checkout */
+            needsAcknowledgment: boolean;
+            /** Format: int64 */
+            totalCents: number;
+        };
+        /** @description One cart line with its allergen status, re-checked on every read */
+        CartLine: {
+            affectedProfiles: components["schemas"]["AffectedProfile"][];
+            /** @description False when the product is no longer sold */
+            available: boolean;
+            /** Format: int64 */
+            lineTotalCents: number;
+            matches: components["schemas"]["SafetyMatch"][];
+            product: components["schemas"]["Product"];
+            /** Format: int32 */
+            qty: number;
+            /** @enum {string} */
+            status: "CLEAR" | "ACKNOWLEDGED" | "NEEDS_ACKNOWLEDGMENT";
+            /** @description True when the product has no allergen data: unable to verify */
+            unverified: boolean;
+        };
         /** @description Create a product. Omit allergens if the label data is not yet known. */
         CreateProductRequest: {
             /** @description Allergens for version 1. Omit for 'no allergen data yet'; send [] for 'verified: none'. */
@@ -292,6 +415,19 @@ export interface components {
             /** @description Present when signed in */
             username?: string;
         };
+        ProblemDetail: {
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            properties?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            status?: number;
+            title?: string;
+            /** Format: uri */
+            type?: string;
+        };
         /** @description A catalog product with the allergens of its current allergen version */
         Product: {
             active: boolean;
@@ -314,6 +450,8 @@ export interface components {
              * @description Price in cents
              */
             priceCents: number;
+            /** @description Allergen check for the signed-in parent's children; absent for visitors and non-shoppers */
+            safety?: components["schemas"]["ProductSafety"];
             sku: string;
         };
         /** @description An allergen on a product's label, at the product's current allergen version */
@@ -334,6 +472,14 @@ export interface components {
             size: number;
             /** Format: int64 */
             total: number;
+        };
+        /** @description The allergen check result for one product, for the signed-in parent's children */
+        ProductSafety: {
+            /** @description Children this result concerns; for UNVERIFIED, every child with an avoid list */
+            affectedProfiles: components["schemas"]["AffectedProfile"][];
+            matches: components["schemas"]["SafetyMatch"][];
+            /** @enum {string} */
+            status: "CLEAR" | "WARNING" | "UNVERIFIED" | "UNAVAILABLE";
         };
         /** @description A child profile. Holds a label only: no name or date of birth. */
         Profile: {
@@ -356,6 +502,19 @@ export interface components {
             /** @example Child 1 */
             label: string;
         };
+        /** @description One child whose avoid list matches one allergen on the product's label */
+        SafetyMatch: {
+            /** @example TREE_NUT.CASHEW */
+            allergenId: string;
+            /** @example Cashew */
+            allergenName: string;
+            /** @enum {string} */
+            matchType: "CONTAINS" | "MAY_CONTAIN";
+            /** Format: uuid */
+            profileId: string;
+            /** @example Child 1 */
+            profileLabel: string;
+        };
         /** @description Replace a product's allergens. Always creates a new immutable allergen version. */
         SetAllergensRequest: {
             /** @description Complete allergen list; [] means verified to contain none */
@@ -368,6 +527,11 @@ export interface components {
             name: string;
             /** Format: int64 */
             priceCents: number;
+        };
+        /** @description Change a line's quantity */
+        UpdateQtyRequest: {
+            /** Format: int32 */
+            qty: number;
         };
     };
     responses: never;
@@ -542,6 +706,116 @@ export interface operations {
             };
         };
     };
+    getCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+        };
+    };
+    addCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+            /** @description Allergen warning: nothing added; resend with ackToken to confirm */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllergenWarning"];
+                };
+            };
+            /** @description Allergen check unavailable: nothing added */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    removeCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+        };
+    };
+    updateCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateQtyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -586,6 +860,7 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string;
+                hideUnsafe?: boolean;
                 page?: number;
                 size?: number;
             };
