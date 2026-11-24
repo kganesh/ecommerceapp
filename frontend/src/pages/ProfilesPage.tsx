@@ -10,6 +10,7 @@ import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { initials } from '../lib/format'
 import { useState, type FormEvent } from 'react'
 import { useAllergens } from '../api/catalog'
 import type { Allergen } from '../api/client'
@@ -27,12 +28,6 @@ import { ErrorNotice } from '../components/ErrorNotice'
 import { tokens } from '../theme'
 
 /** "Child 1" -> "C1", "Maya" -> "M": tells children apart at a glance. */
-function initials(label: string): string {
-  const trimmed = label.trim()
-  const digits = trimmed.match(/\d+$/)?.[0] ?? ''
-  return (trimmed.charAt(0).toUpperCase() + digits).slice(0, 3)
-}
-
 function summary(profile: Profile, allergens: Allergen[]): string {
   if (profile.avoidList.length === 0) return 'Avoiding nothing yet.'
   const names = new Map(allergens.map((a) => [a.id, a.displayName]))

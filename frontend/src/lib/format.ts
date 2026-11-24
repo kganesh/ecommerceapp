@@ -18,3 +18,10 @@ export function toEntries(selection: AllergenSelection): AllergenEntry[] {
 export function toSelection(entries: { allergenId: string; matchType: MatchType }[]): AllergenSelection {
   return Object.fromEntries(entries.map((e) => [e.allergenId, e.matchType]))
 }
+
+/** "Child 1" -> "C1": a short, stable badge for a child profile. */
+export function initials(label: string): string {
+  const trimmed = label.trim()
+  const digits = trimmed.match(/\d+$/)?.[0] ?? ''
+  return (trimmed.charAt(0).toUpperCase() + digits).slice(0, 3)
+}
