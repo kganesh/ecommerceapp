@@ -1,3 +1,6 @@
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import ShoppingCartCheckoutOutlined from '@mui/icons-material/ShoppingCartCheckoutOutlined'
+import LoginOutlined from '@mui/icons-material/LoginOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -68,7 +71,7 @@ export function CartPage() {
     return (
       <Paper sx={{ p: 3, maxWidth: 560 }}>
         <Typography variant="h2">Cart</Typography>
-        <Button variant="contained" sx={{ mt: 2 }} onClick={() => signIn(me.data)}>
+        <Button variant="contained" sx={{ mt: 2 }} startIcon={<LoginOutlined />} onClick={() => signIn(me.data)}>
           Sign in to see your cart
         </Button>
       </Paper>
@@ -140,7 +143,7 @@ export function CartPage() {
                         </option>
                       ))}
                     </TextField>
-                    <Button color="inherit" onClick={() => remove.mutate(line.product.id)}>
+                    <Button color="inherit" startIcon={<DeleteOutlined />} onClick={() => remove.mutate(line.product.id)}>
                       Remove
                     </Button>
                   </Box>
@@ -155,7 +158,7 @@ export function CartPage() {
               <Typography>Total:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{formatPrice(cart.data.totalCents, cart.data.currency)}</Typography>
             </Box>
-            <Button component={RouterLink} to="/checkout" variant="contained" size="large">
+            <Button component={RouterLink} to="/checkout" variant="contained" size="large" startIcon={<ShoppingCartCheckoutOutlined />}>
               Go to checkout
             </Button>
             <Typography variant="body2" color="text.secondary">

@@ -1,3 +1,7 @@
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import DoneOutlined from '@mui/icons-material/DoneOutlined'
+import LockOutlined from '@mui/icons-material/LockOutlined'
+import LoginOutlined from '@mui/icons-material/LoginOutlined'
 import Alert from '@mui/material/Alert'
 import AlertTitle from '@mui/material/AlertTitle'
 import Box from '@mui/material/Box'
@@ -71,10 +75,10 @@ function CheckoutWarningPanel({
         Nothing has been charged.
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-        <Button component={RouterLink} to="/cart" variant="contained">
+        <Button component={RouterLink} to="/cart" variant="contained" startIcon={<ArrowBack />}>
           Back to cart
         </Button>
-        <Button variant="outlined" color="inherit" onClick={onConfirm} disabled={busy}>
+        <Button variant="outlined" color="inherit" startIcon={<DoneOutlined />} onClick={onConfirm} disabled={busy}>
           I understand, place the order
         </Button>
       </Box>
@@ -97,7 +101,7 @@ export function CheckoutPage() {
   if (me.isPending) return <Typography>Loading…</Typography>
   if (!me.data?.authenticated) {
     return (
-      <Button variant="contained" onClick={() => signIn(me.data)}>
+      <Button variant="contained" startIcon={<LoginOutlined />} onClick={() => signIn(me.data)}>
         Sign in to check out
       </Button>
     )
@@ -162,7 +166,7 @@ export function CheckoutPage() {
                   package before serving.
                 </Typography>
                 <Box>
-                  <Button type="submit" variant="contained" size="large" disabled={checkout.isPending}>
+                  <Button type="submit" variant="contained" size="large" startIcon={<LockOutlined />} disabled={checkout.isPending}>
                     Place order
                   </Button>
                 </Box>

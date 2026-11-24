@@ -1,3 +1,5 @@
+import InputAdornment from '@mui/material/InputAdornment'
+import Search from '@mui/icons-material/Search'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
@@ -106,8 +108,17 @@ export function BrowsePage() {
               size="small"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" aria-hidden />
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
-            <Button type="submit" variant="outlined">
+            <Button type="submit" variant="outlined" startIcon={<Search />}>
               Search
             </Button>
           </Box>

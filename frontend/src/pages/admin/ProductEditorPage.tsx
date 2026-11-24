@@ -1,3 +1,5 @@
+import AddCircleOutlined from '@mui/icons-material/AddCircleOutlined'
+import SaveOutlined from '@mui/icons-material/SaveOutlined'
 import ArrowBack from '@mui/icons-material/ArrowBack'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -129,7 +131,7 @@ function NewProductForm() {
       </Paper>
       {create.isError && <ErrorNotice error={create.error} />}
       <Box>
-        <Button type="submit" variant="contained" size="large" disabled={create.isPending}>
+        <Button type="submit" variant="contained" size="large" startIcon={<AddCircleOutlined />} disabled={create.isPending}>
           Create product
         </Button>
       </Box>
@@ -175,7 +177,7 @@ function ExistingProductForms({ product }: { product: Product }) {
           </Alert>
         )}
         <Box>
-          <Button type="submit" variant="contained" disabled={update.isPending}>
+          <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={update.isPending}>
             Save details
           </Button>
         </Box>
@@ -197,7 +199,7 @@ function ExistingProductForms({ product }: { product: Product }) {
         {allergens.isSuccess && <AllergenEditor allergens={allergens.data} value={selection} onChange={setSelection} />}
         {setAllergens.isError && <ErrorNotice error={setAllergens.error} />}
         <Box>
-          <Button type="submit" variant="contained" disabled={setAllergens.isPending}>
+          <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={setAllergens.isPending}>
             Save allergens as new version
           </Button>
         </Box>

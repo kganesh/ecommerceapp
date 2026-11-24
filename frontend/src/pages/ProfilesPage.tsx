@@ -1,3 +1,8 @@
+import SaveOutlined from '@mui/icons-material/SaveOutlined'
+import EditOutlined from '@mui/icons-material/EditOutlined'
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import PersonAddAlt1Outlined from '@mui/icons-material/PersonAddAlt1Outlined'
+import LoginOutlined from '@mui/icons-material/LoginOutlined'
 import Alert from '@mui/material/Alert'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
@@ -78,7 +83,7 @@ function ProfileCard({ profile, allergens }: { profile: Profile; allergens: Alle
         </Box>
         {save.isError && <ErrorNotice error={save.error} />}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 2 }}>
-          <Button type="submit" variant="contained" disabled={!dirty || save.isPending}>
+          <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={!dirty || save.isPending}>
             Save avoid list
           </Button>
           {dirty && (
@@ -106,14 +111,14 @@ function ProfileCard({ profile, allergens }: { profile: Profile; allergens: Alle
             onChange={(e) => setLabel(e.target.value)}
             slotProps={{ htmlInput: { maxLength: 40 } }}
           />
-          <Button type="submit" variant="outlined" disabled={rename.isPending || label.trim() === profile.label}>
+          <Button type="submit" variant="outlined" startIcon={<EditOutlined />} disabled={rename.isPending || label.trim() === profile.label}>
             Rename
           </Button>
         </Box>
         {rename.isError && <ErrorNotice error={rename.error} />}
         <Box sx={{ mt: 1.5 }}>
           {!confirmDelete ? (
-            <Button color="error" onClick={() => setConfirmDelete(true)}>
+            <Button color="error" startIcon={<DeleteOutlined />} onClick={() => setConfirmDelete(true)}>
               Delete {profile.label}
             </Button>
           ) : (
@@ -155,7 +160,7 @@ export function ProfilesPage() {
       <Paper sx={{ p: 3, maxWidth: 560 }}>
         <Typography variant="h2">My children</Typography>
         <Typography sx={{ my: 1.5 }}>Sign in to set up each child's avoid list.</Typography>
-        <Button variant="contained" onClick={() => signIn(me.data)}>
+        <Button variant="contained" startIcon={<LoginOutlined />} onClick={() => signIn(me.data)}>
           Sign in
         </Button>
       </Paper>
@@ -199,7 +204,7 @@ export function ProfilesPage() {
           slotProps={{ htmlInput: { maxLength: 40 } }}
           sx={{ flex: '1 1 220px' }}
         />
-        <Button type="submit" variant="contained" disabled={create.isPending}>
+        <Button type="submit" variant="contained" startIcon={<PersonAddAlt1Outlined />} disabled={create.isPending}>
           Add profile
         </Button>
       </Paper>
