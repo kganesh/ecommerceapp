@@ -30,7 +30,7 @@ if [ ! -f terraform.tfvars ]; then
   step "Creating terraform.tfvars"
   {
     echo "cognito_domain_prefix = \"ecommerceapp-${ACCOUNT}\""
-    [ -n "${ALARM_EMAIL:-}" ] && echo "alarm_email = \"${ALARM_EMAIL}\""
+    if [ -n "${ALARM_EMAIL:-}" ]; then echo "alarm_email = \"${ALARM_EMAIL}\""; fi
   } > terraform.tfvars
   cat terraform.tfvars
 fi
