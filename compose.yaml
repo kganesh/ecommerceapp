@@ -1,0 +1,92 @@
+# Local development stack (spec: "Local testing" section).
+# Every service here is a stand-in for an AWS component; see README.md.
+name: ecommerceapp
+
+services:
+  postgres:
+    # Stand-in for Amazon RDS PostgreSQL. Keep the major version in step with RDS.
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce   # local-only credential
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce -d ecommerce"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    # Stand-in for Amazon ElastiCache. Sessions (BFF, from M2) + cache.
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  keycloak:
+    # Stand-in for Amazon Cognito. Realm, clients and test users are imported
+    # from local/keycloak on startup.
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin   # local-only credential
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin   # local-only credential
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./local/keycloak:/opt/keycloak/data/import:ro
+
+  otel-lgtm:
+    # Stand-in for the OTel Collector + Amazon Managed Prometheus / Grafana.
+    # Grafana: http://localhost:3000 (admin/admin). OTLP: 4317 (gRPC), 4318 (HTTP).
+    image: grafana/otel-lgtm:0.29.2
+    ports:
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
+
+  toxiproxy:
+    # Fault injection between the API and Postgres/Redis (fail-safe tests, M3).
+    # The `chaos` Spring profile routes the app through these proxies.
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    ports:
+      - "8474:8474"     # admin API
+      - "25432:25432"   # -> postgres:5432
+      - "26379:26379"   # -> redis:6379
+    volumes:
+      - ./local/toxiproxy:/config:ro
+    depends_on:
+      - postgres
+      - redis
+
+  backend:
+    # Production-like run of the same image that goes to ECR.
+    # Build it first with `make image`; start with `make up-app`.
+    profiles: ["app"]
+    image: ecommerceapp-backend:local
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce
+      SPRING_DATA_REDIS_HOST: redis
+      OTEL_SERVICE_NAME: ecommerceapp-backend
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
