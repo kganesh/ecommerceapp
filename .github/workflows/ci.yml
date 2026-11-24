@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 25, Testcontainers)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Build and test
+        run: mvn -B -ntp verify
+      - name: Upload generated OpenAPI spec
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-generated
+          path: backend/target/openapi.generated.json
+          if-no-files-found: ignore
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: backend/target/surefire-reports
+
+  frontend:
+    name: Frontend (typecheck, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Generated API types match docs/openapi.json
+        run: |
+          npm run gen:api
+          git diff --exit-code -- src/api/schema.d.ts \
+            || (echo "::error::frontend/src/api/schema.d.ts is stale. Run 'make openapi' and commit." && exit 1)
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  local-stack:
+    name: Local stack config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose.yaml
+        run: docker compose --profile app config --quiet
+      - name: Validate Keycloak realm and Toxiproxy JSON
+        run: |
+          python3 -m json.tool local/keycloak/ecommerce-realm.json > /dev/null
+          python3 -m json.tool local/toxiproxy/toxiproxy.json > /dev/null
