@@ -13,7 +13,7 @@ resource "aws_ecr_repository" "backend" {
 
 resource "aws_ecr_lifecycle_policy" "backend" {
   repository = aws_ecr_repository.backend.name
-  policy     = jsonencode({
+  policy = jsonencode({
     rules = [{
       rulePriority = 1
       description  = "Keep the last 30 images"
@@ -59,13 +59,13 @@ resource "aws_iam_role_policy_attachment" "execution" {
 }
 
 resource "aws_iam_role_policy" "execution_secrets" {
-  name   = "read-app-secrets"
-  role   = aws_iam_role.execution.id
+  name = "read-app-secrets"
+  role = aws_iam_role.execution.id
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = "secretsmanager:GetSecretValue"
+      Effect = "Allow"
+      Action = "secretsmanager:GetSecretValue"
       Resource = [
         aws_db_instance.main.master_user_secret[0].secret_arn,
         aws_secretsmanager_secret.redis_auth.arn,
@@ -82,14 +82,14 @@ resource "aws_iam_role" "task" {
 
 # D19: label reading calls Claude on Bedrock through the US cross-region inference profile.
 resource "aws_iam_role_policy" "task_bedrock" {
-  count  = var.ai_provider == "bedrock" ? 1 : 0
-  name   = "bedrock-label-reading"
-  role   = aws_iam_role.task.id
+  count = var.ai_provider == "bedrock" ? 1 : 0
+  name  = "bedrock-label-reading"
+  role  = aws_iam_role.task.id
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["bedrock:InvokeModel", "bedrock:Converse"]
+      Effect = "Allow"
+      Action = ["bedrock:InvokeModel", "bedrock:Converse"]
       Resource = [
         "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.ai_model_id}",
         "arn:aws:bedrock:*::foundation-model/${trimprefix(var.ai_model_id, "us.")}*",
@@ -144,15 +144,15 @@ resource "aws_ecs_task_definition" "backend" {
   }
 
   container_definitions = jsonencode([{
-    name             = "backend"
-    image            = "${aws_ecr_repository.backend.repository_url}:${var.backend_image_tag}"
-    essential        = true
-    portMappings     = [{ containerPort = 8080, protocol = "tcp" }]
-    environment      = [for k, v in local.backend_environment : { name = k, value = v }]
-    secrets          = [for k, v in local.backend_secrets : { name = k, valueFrom = v }]
+    name         = "backend"
+    image        = "${aws_ecr_repository.backend.repository_url}:${var.backend_image_tag}"
+    essential    = true
+    portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+    environment  = [for k, v in local.backend_environment : { name = k, value = v }]
+    secrets      = [for k, v in local.backend_secrets : { name = k, valueFrom = v }]
     logConfiguration = {
       logDriver = "awslogs"
-      options   = {
+      options = {
         awslogs-group         = aws_cloudwatch_log_group.backend.name
         awslogs-region        = var.region
         awslogs-stream-prefix = "backend"

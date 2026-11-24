@@ -32,7 +32,7 @@ resource "aws_cloudfront_origin_access_control" "web" {
 resource "aws_s3_bucket_policy" "web" {
   bucket = aws_s3_bucket.web.id
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Service = "cloudfront.amazonaws.com" }
@@ -48,7 +48,7 @@ resource "aws_cloudfront_function" "spa_routes" {
   name    = "${local.name}-spa-routes"
   runtime = "cloudfront-js-2.0"
   publish = true
-  code    = <<-JS
+  code = <<-JS
     function handler(event) {
       var request = event.request;
       if (request.uri.indexOf('.') === -1) {

@@ -81,7 +81,7 @@ data "archive_file" "add_to_shopper" {
 
   source {
     filename = "index.py"
-    content  = <<-PY
+    content = <<-PY
       import boto3
 
       cognito = boto3.client("cognito-idp")
@@ -99,9 +99,9 @@ data "archive_file" "add_to_shopper" {
 }
 
 resource "aws_iam_role" "add_to_shopper" {
-  name               = "${local.name}-add-to-shopper"
+  name = "${local.name}-add-to-shopper"
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
@@ -116,10 +116,10 @@ resource "aws_iam_role_policy_attachment" "add_to_shopper_logs" {
 }
 
 resource "aws_iam_role_policy" "add_to_shopper" {
-  name   = "add-to-shopper-group"
-  role   = aws_iam_role.add_to_shopper.id
+  name = "add-to-shopper-group"
+  role = aws_iam_role.add_to_shopper.id
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = "cognito-idp:AdminAddUserToGroup"

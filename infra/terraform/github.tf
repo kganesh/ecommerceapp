@@ -17,9 +17,9 @@ locals {
 }
 
 resource "aws_iam_role" "deploy" {
-  name               = "${local.name}-github-deploy"
+  name = "${local.name}-github-deploy"
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Federated = local.github_oidc_arn }
@@ -36,10 +36,10 @@ resource "aws_iam_role" "deploy" {
 }
 
 resource "aws_iam_role_policy" "deploy" {
-  name   = "deploy"
-  role   = aws_iam_role.deploy.id
+  name = "deploy"
+  role = aws_iam_role.deploy.id
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [
       { Effect = "Allow", Action = "ecr:GetAuthorizationToken", Resource = "*" },
       {

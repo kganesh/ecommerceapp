@@ -149,12 +149,12 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type       = "metric", x = 0, y = 0, width = 12, height = 6
+        type = "metric", x = 0, y = 0, width = 12, height = 6
         properties = {
-          title   = "Requests and errors"
-          region  = var.region
-          stat    = "Sum"
-          period  = 60
+          title  = "Requests and errors"
+          region = var.region
+          stat   = "Sum"
+          period = 60
           metrics = [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.main.arn_suffix],
             [".", "HTTPCode_Target_4XX_Count", ".", "."],
@@ -163,11 +163,11 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric", x = 12, y = 0, width = 12, height = 6
+        type = "metric", x = 12, y = 0, width = 12, height = 6
         properties = {
-          title   = "API latency (s)"
-          region  = var.region
-          period  = 60
+          title  = "API latency (s)"
+          region = var.region
+          period = 60
           metrics = [
             ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.main.arn_suffix, { stat = "p50" }],
             ["...", { stat = "p95" }],
@@ -177,12 +177,12 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric", x = 0, y = 6, width = 12, height = 6
+        type = "metric", x = 0, y = 6, width = 12, height = 6
         properties = {
-          title   = "Safety signals"
-          region  = var.region
-          stat    = "Sum"
-          period  = 300
+          title  = "Safety signals"
+          region = var.region
+          stat   = "Sum"
+          period = 300
           metrics = [
             [local.metric_namespace, "AllergenCheckFailures"],
             [".", "LabelReadingFailures"],
@@ -191,12 +191,12 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type       = "metric", x = 12, y = 6, width = 12, height = 6
+        type = "metric", x = 12, y = 6, width = 12, height = 6
         properties = {
-          title   = "Capacity"
-          region  = var.region
-          stat    = "Average"
-          period  = 300
+          title  = "Capacity"
+          region = var.region
+          stat   = "Average"
+          period = 300
           metrics = [
             ["AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.backend.name],
             [".", "MemoryUtilization", ".", ".", ".", "."],
