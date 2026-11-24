@@ -35,7 +35,8 @@ test('M2: an avoid-list change is visible on the next read', async ({ page }) =>
   await page.getByRole('form', { name: `Avoid list for ${label}` }).getByRole('button', { name: 'Save avoid list' }).click()
 
   await page.reload()
-  await expect(page.getByText(`Avoiding: Sesame.`)).toBeVisible()
+  // parent1 is shared by every run, so look inside this test's own profile.
+  await expect(page.getByRole('listitem').filter({ hasText: label }).getByText('Avoiding: Sesame.')).toBeVisible()
 })
 
 test('M1: admin1 creates a product and a new allergen version', async ({ page }) => {

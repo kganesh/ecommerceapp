@@ -137,6 +137,9 @@ jobs:
       - uses: grafana/setup-k6-action@v1
       - name: Load test (10 req/s)
         run: k6 run -e BASE_URL=http://localhost:8081 -e DURATION=1m load/shop.js
+      - name: Page snapshots of failed tests
+        if: failure()
+        run: for f in frontend/test-results/*/error-context.md; do echo "=== $f"; head -c 6000 "$f"; done || true
       - name: Backend logs
         if: failure()
         run: docker compose --profile prod logs --tail=300 backend web
