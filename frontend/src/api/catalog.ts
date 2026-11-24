@@ -90,7 +90,11 @@ function invalidateProducts(client: ReturnType<typeof useQueryClient>, product: 
 export function useCreateProduct() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { details: ProductDetailsInput; allergens: AllergenEntry[] | null }) =>
+    mutationFn: async (input: {
+      details: ProductDetailsInput
+      allergens: AllergenEntry[] | null
+      labelExtractionId?: string
+    }) =>
       unwrap(
         await api.POST('/api/v1/admin/products', {
           body: {
@@ -99,6 +103,7 @@ export function useCreateProduct() {
             description: input.details.description || undefined,
             priceCents: input.details.priceCents,
             allergens: input.allergens ?? undefined,
+            labelExtractionId: input.allergens === null ? undefined : input.labelExtractionId,
           },
         }),
       ),
@@ -128,11 +133,12 @@ export function useUpdateProduct(id: string) {
 export function useSetAllergens(id: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: async (allergens: AllergenEntry[]) =>
+    /** labelExtractionId: the label photo reading the admin reviewed, kept in the audit (FR-19). */
+    mutationFn: async (input: { allergens: AllergenEntry[]; labelExtractionId?: string }) =>
       unwrap(
         await api.PUT('/api/v1/admin/products/{id}/allergens', {
           params: { path: { id } },
-          body: { allergens },
+          body: { allergens: input.allergens, labelExtractionId: input.labelExtractionId },
         }),
       ),
     onSuccess: (product) => invalidateProducts(client, product),

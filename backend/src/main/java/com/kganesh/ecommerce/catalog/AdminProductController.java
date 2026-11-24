@@ -68,7 +68,7 @@ class AdminProductController {
     @Operation(operationId = "adminSetProductAllergens", summary = "Replace allergens; creates a new immutable version")
     Product setAllergens(@PathVariable("id") UUID id, @Valid @RequestBody SetAllergensRequest request,
                          Authentication auth) {
-        return catalog.setAllergens(id, request.allergens(), auth.getName());
+        return catalog.setAllergens(id, request.allergens(), request.labelExtractionId(), auth.getName());
     }
 
     @GetMapping("/{id}/audit")

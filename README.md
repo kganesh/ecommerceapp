@@ -98,6 +98,22 @@ curl -s -X POST localhost:8474/proxies/redis/toxics \
   -d '{"name":"down","type":"timeout","attributes":{"timeout":0}}'
 ```
 
+## AI label reading (optional, M4.5)
+
+Admins can photograph a label in the product editor; Claude on Amazon Bedrock suggests
+allergens, a keyword check backs it up, and the admin reviews and saves. It is off by default
+and the control stays hidden.
+
+To turn it on (locally or in Codespaces):
+
+1. In the AWS account, enable access to Claude Sonnet 5.5 in Amazon Bedrock for a US region.
+2. Give the backend AWS credentials: Codespaces secrets `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` (e.g. `us-east-1`), or any standard AWS credential source.
+3. Start the backend with `AI_PROVIDER=bedrock` (optionally `AI_MODEL_ID`, default
+   `us.anthropic.claude-sonnet-5-5`).
+
+Before using it in production, run it against a set of real labels with known answers (NFR-12).
+
 ## Tests
 
 ```bash

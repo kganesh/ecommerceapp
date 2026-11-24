@@ -9,6 +9,9 @@
     "url" : "/"
   } ],
   "tags" : [ {
+    "description" : "Suggest allergens from a label photo; an admin reviews before saving",
+    "name" : "admin-label-extractions"
+  }, {
     "description" : "Allergen taxonomy for avoid lists and product tagging",
     "name" : "allergens"
   }, {
@@ -34,6 +37,60 @@
     "name" : "meta"
   } ],
   "paths" : {
+    "/api/v1/admin/label-extractions" : {
+      "post" : {
+        "operationId" : "adminExtractLabel",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "image" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "image" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LabelExtraction"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "summary" : "Read a label photo and suggest allergens. Saves nothing to the catalog.",
+        "tags" : [ "admin-label-extractions" ]
+      }
+    },
+    "/api/v1/admin/label-extractions/status" : {
+      "get" : {
+        "operationId" : "adminLabelReadingStatus",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LabelReadingStatus"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Whether label reading is turned on, and which model",
+        "tags" : [ "admin-label-extractions" ]
+      }
+    },
     "/api/v1/admin/products" : {
       "get" : {
         "operationId" : "adminSearchProducts",
@@ -977,6 +1034,11 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "labelExtractionId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Label extraction the allergen change was reviewed from, if any"
+          },
           "toVersion" : {
             "type" : "integer",
             "format" : "int32"
@@ -1129,6 +1191,11 @@
           "description" : {
             "type" : "string"
           },
+          "labelExtractionId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "The label extraction these allergens were reviewed from, if any (FR-19). Needs allergens."
+          },
           "name" : {
             "type" : "string",
             "maxLength" : 200,
@@ -1146,6 +1213,65 @@
           }
         },
         "required" : [ "name", "priceCents", "sku" ]
+      },
+      "LabelExtraction" : {
+        "type" : "object",
+        "description" : "What was read from one label photo, for the admin to check against the label",
+        "properties" : {
+          "allergens" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SuggestedAllergen"
+            }
+          },
+          "containsStatement" : {
+            "type" : "string"
+          },
+          "extractionId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Pass as labelExtractionId when saving allergens"
+          },
+          "ingredientsText" : {
+            "type" : "string"
+          },
+          "mayContainStatement" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string",
+            "example" : "us.anthropic.claude-sonnet-5-5"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "readable" : {
+            "type" : "boolean",
+            "description" : "False when the photo could not be read reliably"
+          },
+          "unmatchedTerms" : {
+            "type" : "array",
+            "description" : "Allergen-like words that match no taxonomy entry",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "allergens", "extractionId", "model", "readable", "unmatchedTerms" ]
+      },
+      "LabelReadingStatus" : {
+        "type" : "object",
+        "description" : "Whether label reading is turned on",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "model" : {
+            "type" : "string",
+            "example" : "us.anthropic.claude-sonnet-5-5"
+          }
+        },
+        "required" : [ "enabled", "model" ]
       },
       "LineWarning" : {
         "type" : "object",
@@ -1508,9 +1634,42 @@
             "items" : {
               "$ref" : "#/components/schemas/AllergenEntry"
             }
+          },
+          "labelExtractionId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "The label extraction these allergens were reviewed from, if any (FR-19)"
           }
         },
         "required" : [ "allergens" ]
+      },
+      "SuggestedAllergen" : {
+        "type" : "object",
+        "description" : "An allergen suggested from a label photo. A suggestion only; nothing is saved until an admin saves.",
+        "properties" : {
+          "allergenId" : {
+            "type" : "string",
+            "example" : "TREE_NUT.CASHEW"
+          },
+          "displayName" : {
+            "type" : "string",
+            "example" : "Cashew"
+          },
+          "evidence" : {
+            "type" : "string",
+            "description" : "Printed words the suggestion is based on",
+            "example" : "cashews"
+          },
+          "matchType" : {
+            "type" : "string",
+            "enum" : [ "CONTAINS", "MAY_CONTAIN" ]
+          },
+          "source" : {
+            "type" : "string",
+            "enum" : [ "MODEL", "KEYWORD_SCAN", "MODEL_AND_KEYWORD_SCAN" ]
+          }
+        },
+        "required" : [ "allergenId", "displayName", "matchType", "source" ]
       },
       "UpdateProductRequest" : {
         "type" : "object",

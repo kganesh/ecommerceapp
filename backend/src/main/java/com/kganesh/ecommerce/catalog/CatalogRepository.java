@@ -177,22 +177,32 @@ class CatalogRepository {
         return result;
     }
 
-    void audit(String actor, UUID productId, AuditAction action, Integer fromVersion, Integer toVersion) {
+    boolean labelExtractionExists(UUID id) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM label_extraction WHERE id = :id)")
+                .param("id", id)
+                .query(Boolean.class)
+                .single();
+    }
+
+    void audit(String actor, UUID productId, AuditAction action, Integer fromVersion, Integer toVersion,
+               UUID labelExtractionId) {
         jdbc.sql("""
-                        INSERT INTO catalog_audit (actor, product_id, action, from_version, to_version)
-                        VALUES (:actor, :productId, :action, :fromVersion, :toVersion)
+                        INSERT INTO catalog_audit (actor, product_id, action, from_version, to_version,
+                            label_extraction_id)
+                        VALUES (:actor, :productId, :action, :fromVersion, :toVersion, :labelExtractionId)
                         """)
                 .param("actor", actor)
                 .param("productId", productId)
                 .param("action", action.name())
                 .param("fromVersion", fromVersion, java.sql.Types.INTEGER)
                 .param("toVersion", toVersion, java.sql.Types.INTEGER)
+                .param("labelExtractionId", labelExtractionId, java.sql.Types.OTHER)
                 .update();
     }
 
     List<AuditEntry> auditTrail(UUID productId) {
         return jdbc.sql("""
-                        SELECT action, actor, from_version, to_version, at
+                        SELECT action, actor, from_version, to_version, label_extraction_id, at
                         FROM catalog_audit
                         WHERE product_id = :productId
                         ORDER BY at, id
@@ -203,6 +213,7 @@ class CatalogRepository {
                         rs.getString("actor"),
                         nullableInt(rs, "from_version"),
                         nullableInt(rs, "to_version"),
+                        rs.getObject("label_extraction_id", UUID.class),
                         rs.getTimestamp("at").toInstant()))
                 .list();
     }

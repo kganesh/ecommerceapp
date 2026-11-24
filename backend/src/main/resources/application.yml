@@ -10,6 +10,11 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      # Label photos (FR-16): the client resizes to well under this; the service enforces 3.5 MB.
+      max-file-size: 5MB
+      max-request-size: 6MB
   session:
     redis:
       namespace: ecommerceapp:session
@@ -49,6 +54,11 @@ app:
     # "test" accepts only test tokens (tok_test_approve / tok_test_decline). The real
     # hosted provider is chosen before M5 (spec: Items awaiting sign-off).
     provider: ${PAYMENTS_PROVIDER:test}
+  ai:
+    # "disabled" (default) or "bedrock". Bedrock uses the standard AWS credential chain
+    # and AWS_REGION; the model must be enabled in that account (spec: AI assist, D19).
+    provider: ${AI_PROVIDER:disabled}
+    model-id: ${AI_MODEL_ID:us.anthropic.claude-sonnet-5-5}
 
 server:
   shutdown: graceful
