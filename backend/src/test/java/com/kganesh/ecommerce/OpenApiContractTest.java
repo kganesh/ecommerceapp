@@ -50,9 +50,17 @@ class OpenApiContractTest {
         }
 
         String contract = Files.readString(CONTRACT);
-        JSONAssert.assertEquals(
-                "Backend API drifted from docs/openapi.json. If intended, run `make openapi` and commit. "
-                        + "Generated spec: backend/" + GENERATED,
-                contract, generated, JSONCompareMode.NON_EXTENSIBLE);
+        try {
+            JSONAssert.assertEquals(
+                    "Backend API drifted from docs/openapi.json. If intended, run `make openapi` and commit. "
+                            + "Generated spec: backend/" + GENERATED,
+                    contract, generated, JSONCompareMode.NON_EXTENSIBLE);
+        } catch (AssertionError drift) {
+            // Echo the generated spec so it can be recovered from CI logs.
+            System.out.println("----- BEGIN GENERATED OPENAPI -----");
+            System.out.print(generated);
+            System.out.println("----- END GENERATED OPENAPI -----");
+            throw drift;
+        }
     }
 }
