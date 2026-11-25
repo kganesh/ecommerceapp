@@ -80,7 +80,7 @@ variable "ai_provider" {
 
 variable "ai_model_id" {
   type    = string
-  default = "us.anthropic.claude-sonnet-5-5"
+  default = "us.anthropic.claude-sonnet-4-6"
 }
 
 variable "cognito_domain_prefix" {

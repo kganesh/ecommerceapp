@@ -60,7 +60,7 @@ app:
     # "disabled" (default) or "bedrock". Bedrock uses the standard AWS credential chain
     # and AWS_REGION; the model must be enabled in that account (spec: AI assist, D19).
     provider: ${AI_PROVIDER:disabled}
-    model-id: ${AI_MODEL_ID:us.anthropic.claude-sonnet-5-5}
+    model-id: ${AI_MODEL_ID:us.anthropic.claude-sonnet-4-6}
 
 server:
   shutdown: graceful
