@@ -36,7 +36,7 @@ public final class LabelDtos {
     public record LabelExtraction(
             @Schema(requiredMode = REQUIRED, description = "Pass as labelExtractionId when saving allergens")
             UUID extractionId,
-            @Schema(requiredMode = REQUIRED, example = "us.anthropic.claude-sonnet-5-5") String model,
+            @Schema(requiredMode = REQUIRED, example = "us.anthropic.claude-sonnet-4-6") String model,
             @Schema(requiredMode = REQUIRED, description = "False when the photo could not be read reliably")
             boolean readable,
             String ingredientsText,
@@ -51,6 +51,6 @@ public final class LabelDtos {
     @Schema(description = "Whether label reading is turned on")
     public record LabelReadingStatus(
             @Schema(requiredMode = REQUIRED) boolean enabled,
-            @Schema(requiredMode = REQUIRED, example = "us.anthropic.claude-sonnet-5-5") String model) {
+            @Schema(requiredMode = REQUIRED, example = "us.anthropic.claude-sonnet-4-6") String model) {
     }
 }

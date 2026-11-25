@@ -4,11 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { renderWithProviders, stubFetch } from '../test/render'
 import { LabelPhotoReader } from './LabelPhotoReader'
 
-const enabled = { enabled: true, model: 'us.anthropic.claude-sonnet-5-5' }
+const enabled = { enabled: true, model: 'us.anthropic.claude-sonnet-4-6' }
 
 const reading = {
   extractionId: 'ex-1',
-  model: 'us.anthropic.claude-sonnet-5-5',
+  model: 'us.anthropic.claude-sonnet-4-6',
   readable: true,
   ingredientsText: 'Oats, cashews, sugar',
   mayContainStatement: 'May contain peanuts',

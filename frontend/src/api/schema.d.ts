@@ -541,7 +541,7 @@ export interface components {
             extractionId: string;
             ingredientsText?: string;
             mayContainStatement?: string;
-            /** @example us.anthropic.claude-sonnet-5-5 */
+            /** @example us.anthropic.claude-sonnet-4-6 */
             model: string;
             notes?: string;
             /** @description False when the photo could not be read reliably */
@@ -552,7 +552,7 @@ export interface components {
         /** @description Whether label reading is turned on */
         LabelReadingStatus: {
             enabled: boolean;
-            /** @example us.anthropic.claude-sonnet-5-5 */
+            /** @example us.anthropic.claude-sonnet-4-6 */
             model: string;
         };
         /** @description A cart line that needs the parent's confirmation before the order is placed */

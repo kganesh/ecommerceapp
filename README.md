@@ -123,11 +123,11 @@ and the control stays hidden.
 
 To turn it on (locally or in Codespaces):
 
-1. In the AWS account, enable access to Claude Sonnet 5.5 in Amazon Bedrock for a US region.
+1. In the AWS account, enable access to Claude Sonnet 4.6 in Amazon Bedrock for a US region. Sonnet 5.x is refused on some accounts with "not available for this account" even when Bedrock reports it as available.
 2. Give the backend AWS credentials: Codespaces secrets `AWS_ACCESS_KEY_ID`,
    `AWS_SECRET_ACCESS_KEY` and `AWS_REGION` (e.g. `us-east-1`), or any standard AWS credential source.
 3. Start the backend with `AI_PROVIDER=bedrock` (optionally `AI_MODEL_ID`, default
-   `us.anthropic.claude-sonnet-5-5`).
+   `us.anthropic.claude-sonnet-4-6`).
 
 Before using it in production, run it against a set of real labels with known answers (NFR-12).
 
